@@ -12,9 +12,11 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -84,8 +86,15 @@ public class WorkforceProfession {
         return this.paymentEnabled && EconomyService.economyIntegrationEnabled;
     }
 
+    public boolean hasAttributeOfType(WorkforceAttributeType type, int currentLevel) {
+        return this.attributes.stream().anyMatch(
+                (attribute) ->
+                        attribute.type == type && ((currentLevel != -1 && attribute.levelThreshold <= currentLevel) || currentLevel == -1)
+        );
+    }
+
     public boolean hasAttributeOfType(WorkforceAttributeType type) {
-        return this.attributes.stream().anyMatch((attribute) -> attribute.type == type);
+        return this.hasAttributeOfType(type, -1);
     }
 
     public @Nullable List<WorkforceAttribute> getAttributesByType(WorkforceAttributeType type) {
@@ -96,12 +105,12 @@ public class WorkforceProfession {
         return null;
     }
 
-    public @Nullable List<WorkforceAttribute> getAttributesByType(WorkforceAttributeType type, int playerLevel) {
+    public @NotNull List<WorkforceAttribute> getAttributesByType(WorkforceAttributeType type, int playerLevel) {
         if (this.hasAttributeOfType(type) && this.attributes.stream().anyMatch((attribute) -> playerLevel >= attribute.levelThreshold)) {
             return this.attributes.stream().filter((attribute) -> attribute.type == type && playerLevel >= attribute.levelThreshold).collect(Collectors.toList());
         }
 
-        return null;
+        return Arrays.stream(new WorkforceAttribute[]{}).collect(Collectors.toList());
     }
 
 

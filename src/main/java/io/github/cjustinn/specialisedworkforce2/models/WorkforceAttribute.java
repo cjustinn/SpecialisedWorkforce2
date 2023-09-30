@@ -30,7 +30,7 @@ public class WorkforceAttribute {
     }
 
     public String getEquation(String name) {
-        return this.equations.containsKey(name) ? this.equations.get(name) : "1";
+        return this.equations.containsKey(name) ? this.equations.get(name) : "0";
     }
 
     public boolean targets(String item) {

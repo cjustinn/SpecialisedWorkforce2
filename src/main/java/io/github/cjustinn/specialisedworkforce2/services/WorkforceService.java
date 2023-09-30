@@ -1,5 +1,6 @@
 package io.github.cjustinn.specialisedworkforce2.services;
 
+import io.github.cjustinn.specialisedworkforce2.enums.WorkforceAttributeType;
 import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLProperty;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
@@ -29,6 +30,13 @@ public class WorkforceService {
                 (prof) ->
                         prof.employsPlayer(user) && prof.jobId.equalsIgnoreCase(job) && prof.isActive()
         );
+    }
+
+    public static List<WorkforceUserProfession> GetActiveUserProfessionsWithAttribute(String user, WorkforceAttributeType type) {
+        return userProfessions.stream().filter(
+                (userProfession) ->
+                        userProfession.isActive() && userProfession.employsPlayer(user) && userProfession.getProfession().hasAttributeOfType(type, userProfession.getLevel())
+        ).collect(Collectors.toList());
     }
 
     public static List<WorkforceUserProfession> GetUserProfessions(String user) {

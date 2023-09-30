@@ -3,8 +3,8 @@ version: '${project.version}'
 main: io.github.cjustinn.specialisedworkforce2.SpecialisedWorkforce2
 prefix: 'SpecialisedWorkforce 2'
 api-version: 1.20
-load: STARTUP
-depend: [Vault]
+load: POSTWORLD
+depend: [Vault, CoreProtect]
 description: Provide jobs for players to provide Vault-based money rewards and other bonuses.
 commands:
   workforce:
