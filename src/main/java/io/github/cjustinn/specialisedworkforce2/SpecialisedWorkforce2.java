@@ -5,17 +5,21 @@ import io.github.cjustinn.specialisedworkforce2.commands.handlers.WorkforceComma
 import io.github.cjustinn.specialisedworkforce2.commands.tabcompleters.WorkforceAdminTabCompleter;
 import io.github.cjustinn.specialisedworkforce2.commands.tabcompleters.WorkforceCommandTabCompleter;
 import io.github.cjustinn.specialisedworkforce2.listeners.CustomInventoryListener;
+import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforceBlockListener;
+import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforcePlayerListener;
 import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLCredentials;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
-import io.github.cjustinn.specialisedworkforce2.services.EconomyService;
-import io.github.cjustinn.specialisedworkforce2.services.LoggingService;
-import io.github.cjustinn.specialisedworkforce2.services.SQLService;
-import io.github.cjustinn.specialisedworkforce2.services.WorkforceService;
+import io.github.cjustinn.specialisedworkforce2.services.*;
+import net.coreprotect.CoreProtect;
+import net.coreprotect.CoreProtectAPI;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -26,6 +30,8 @@ import java.sql.SQLException;
 import java.util.*;
 
 public final class SpecialisedWorkforce2 extends JavaPlugin {
+    public static SpecialisedWorkforce2 plugin;
+
     // Take a very Angular-esque approach - any functions used in multiple classes should be split out into separate "service" classes, which can be
     // invoked from anywhere they're needed. Services should be created around similar, related functions (economy, job, etc.).
     private FileConfiguration pluginConfig = null;
@@ -33,6 +39,8 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        SpecialisedWorkforce2.plugin = this;
+
         if (!this.initialisePlugin()) {
             LoggingService.WriteError("Plugin initialisation failed. SpecialisedWorkforce 2 is now disabled.");
             Bukkit.getPluginManager().disablePlugin(this);
@@ -51,6 +59,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
     private boolean initialisePlugin() {
         List<Boolean> statuses = new ArrayList<Boolean>();
 
+        statuses.add(this.initialiseCoreProtect());
         statuses.add(this.loadConfiguration());
         statuses.add(this.loadUserData());
         statuses.add(this.registerListeners());
@@ -71,11 +80,14 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
 
         // (1) Load main config file ('plugins/SpecialisedWorkforce2/config.yml').
         File mainFile = new File(pluginDirectory, "config.yml");
-        try {
-            mainFile.createNewFile();
-        } catch (IOException err) {
-            LoggingService.WriteError("Could not create main plugin config.");
-            success = false;
+
+        if (!mainFile.exists()) {
+            try {
+                mainFile.createNewFile();
+            } catch (IOException err) {
+                LoggingService.WriteError("Could not create main plugin config.");
+                success = false;
+            }
         }
 
         if (mainFile.exists()) {
@@ -95,8 +107,14 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
             defaults.put("quitLossRate", 0.2);
             defaults.put("useEconomy", true);
 
-            this.pluginConfig.addDefaults(defaults);
+            for (Map.Entry<String, Object> entry : defaults.entrySet()) {
+                if (!this.pluginConfig.contains(entry.getKey())) {
+                    this.pluginConfig.addDefault(entry.getKey(), entry.getValue());
+                }
+            }
+
             this.pluginConfig.options().copyDefaults(true);
+
             try {
                 this.pluginConfig.save(mainFile);
             } catch (IOException err) {
@@ -106,54 +124,61 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
 
         // (2) Load job config file ('plugins/SpecialisedWorkforce2/jobs.yml').
         File jobFile = new File(pluginDirectory, "jobs.yml");
-        try {
-            jobFile.createNewFile();
-        } catch (IOException err) {
-            LoggingService.WriteError("Could not create jobs file.");
-            success = false;
+        boolean createdNow = false;
+
+        if (!jobFile.exists()) {
+            try {
+                jobFile.createNewFile();
+                createdNow = true;
+            } catch (IOException err) {
+                LoggingService.WriteError("Could not create jobs file.");
+                success = false;
+            }
         }
 
         if (jobFile.exists()) {
             this.jobConfig = YamlConfiguration.loadConfiguration(jobFile);
 
-            Map<String, Object> defaults = new HashMap<String, Object>();
-            defaults.put("farmer.name", "Farmer");
-            defaults.put("farmer.group", "primary");
-            defaults.put("farmer.description", new String[]{
-                    "Receives bonuses to crop yields",
-                    "and a chance to negate damage to",
-                    "their hoes."
-            });
-            defaults.put("farmer.icon.name", "WHEAT");
-            defaults.put("farmer.icon.customModelData", 1000);
-            defaults.put("farmer.payment.enabled", true);
-            defaults.put("farmer.payment.equation", "0.25 * (1 + ({level} * 0.38))");
-            defaults.put("farmer.attributes.cropbreaker.type", "BONUS_BLOCK_DROPS");
-            defaults.put("farmer.attributes.cropbreaker.amount", "1 * (1 + ({level} * 0.06))");
-            defaults.put("farmer.attributes.cropbreaker.chance", "0.1 + ({level} * 0.014)");
-            defaults.put("farmer.attributes.cropbreaker.levelThreshold", 0);
-            defaults.put("farmer.attributes.cropbreaker.targets", new String[]{
-                    "CARROT",
-                    "POTATO",
-                    "BEETROOT",
-                    "MELON",
-                    "PUMPKIN",
-                    "WHEAT"
-            });
-            defaults.put("farmer.attributes.toolsave.type", "DURABILITY_SAVE");
-            defaults.put("farmer.attributes.toolsave.chance", "0.1 + ({level} * 0.013)");
-            defaults.put("farmer.attributes.toolsave.levelThreshold", 10);
-            defaults.put("farmer.attributes.toolsave.targets", new String[]{
-                    "{*}_HOE"
-            });
+            if (createdNow) {
+                Map<String, Object> defaults = new HashMap<String, Object>();
+                defaults.put("farmer.name", "Farmer");
+                defaults.put("farmer.group", "primary");
+                defaults.put("farmer.description", new String[]{
+                        "Receives bonuses to crop yields",
+                        "and a chance to negate damage to",
+                        "their hoes."
+                });
+                defaults.put("farmer.icon.name", "WHEAT");
+                defaults.put("farmer.icon.customModelData", 1000);
+                defaults.put("farmer.payment.enabled", true);
+                defaults.put("farmer.payment.equation", "0.25 * (1 + ({level} * 0.38))");
+                defaults.put("farmer.attributes.cropbreaker.type", "BONUS_BLOCK_DROPS");
+                defaults.put("farmer.attributes.cropbreaker.amount", "1 * (1 + ({level} * 0.06))");
+                defaults.put("farmer.attributes.cropbreaker.chance", "0.1 + ({level} * 0.014)");
+                defaults.put("farmer.attributes.cropbreaker.levelThreshold", 0);
+                defaults.put("farmer.attributes.cropbreaker.targets", new String[]{
+                        "CARROT",
+                        "POTATO",
+                        "BEETROOT",
+                        "MELON",
+                        "PUMPKIN",
+                        "WHEAT"
+                });
+                defaults.put("farmer.attributes.toolsave.type", "DURABILITY_SAVE");
+                defaults.put("farmer.attributes.toolsave.chance", "0.1 + ({level} * 0.013)");
+                defaults.put("farmer.attributes.toolsave.levelThreshold", 10);
+                defaults.put("farmer.attributes.toolsave.targets", new String[]{
+                        "{*}_HOE"
+                });
 
 
-            this.jobConfig.addDefaults(defaults);
-            this.jobConfig.options().copyDefaults(true);
-            try {
-                this.jobConfig.save(jobFile);
-            } catch (IOException err) {
-                LoggingService.WriteError("Could not save plugin jobs config. Jobs may not be saved.");
+                this.jobConfig.addDefaults(defaults);
+                this.jobConfig.options().copyDefaults(true);
+                try {
+                    this.jobConfig.save(jobFile);
+                } catch (IOException err) {
+                    LoggingService.WriteError("Could not save plugin jobs config. Jobs may not be saved.");
+                }
             }
         }
 
@@ -186,13 +211,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
         }
 
         // Fetch economy-related settings.
-        final boolean vaultInstalled = this.getServer().getPluginManager().getPlugin("Vault") != null;
-        final boolean economyEnabledInConfig = this.pluginConfig.getBoolean("useEconomy", true);
-        EconomyService.economyIntegrationEnabled = economyEnabledInConfig && vaultInstalled;
-
-        if (!vaultInstalled && economyEnabledInConfig) {
-            LoggingService.WriteWarning("You have economy integration enabled but Vault is not installed! Economy integration has been disabled.");
-        }
+        EconomyService.economyIntegrationEnabled = this.integrateEconomy();
 
         // Fetch job-related settings.
         WorkforceService.maximumLevel = this.pluginConfig.getInt("maxLevel", 50);
@@ -210,6 +229,26 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
         }
 
         return true;
+    }
+
+    private boolean integrateEconomy() {
+        final boolean vaultInstalled = this.getServer().getPluginManager().getPlugin("Vault") != null;
+        final boolean economyEnabledInConfig = this.pluginConfig.getBoolean("useEconomy", true);
+
+        if (!vaultInstalled && economyEnabledInConfig) {
+            LoggingService.WriteWarning("You have economy integration enabled but Vault is not installed! Economy integration has been disabled.");
+        } else if (vaultInstalled && economyEnabledInConfig) {
+            RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+            if (rsp != null) {
+                EconomyService.SetEconomy(rsp.getProvider());
+
+                return true;
+            } else {
+                LoggingService.WriteWarning("Failed to get Vault economy provider; economy integration is disabled.");
+            }
+        }
+
+        return false;
     }
 
     private boolean loadJobs() {
@@ -304,6 +343,21 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
         }
     }
 
+    private boolean initialiseCoreProtect() {
+        Plugin plugin = getServer().getPluginManager().getPlugin("CoreProtect");
+        final boolean onServer = plugin != null;
+        final boolean apiEnabled = ((CoreProtect) plugin).getAPI().isEnabled();
+        final boolean validApiVersion = ((CoreProtect) plugin).getAPI().APIVersion() >= 9;
+
+        if (apiEnabled && validApiVersion) {
+            CoreProtectService.SetAPI(((CoreProtect) plugin).getAPI());
+        } else if (!onServer || !apiEnabled || !validApiVersion) {
+            LoggingService.WriteError("Unable to find & initialise CoreProtect. SpecialisedWorkforce 2 is now disabling.");
+        }
+
+        return onServer && apiEnabled && validApiVersion;
+    }
+
     private boolean registerListeners() {
         // Command Executors
         getCommand("workforce").setExecutor(new WorkforceCommandExecutor());
@@ -315,6 +369,8 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
 
         // Listeners
         getServer().getPluginManager().registerEvents(new CustomInventoryListener(), this);
+        getServer().getPluginManager().registerEvents(new WorkforceBlockListener(), this);
+        getServer().getPluginManager().registerEvents(new WorkforcePlayerListener(), this);
 
         return true;
     }

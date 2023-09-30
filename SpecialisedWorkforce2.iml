@@ -72,5 +72,9 @@
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.graalvm.regex:regex:23.0.1" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.graalvm.truffle:truffle-api:23.0.1" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: com.ibm.icu:icu4j:72.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: com.github.MilkBowl:VaultAPI:1.7" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.bukkit:bukkit:1.13.1-R0.1-SNAPSHOT" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: commons-lang:commons-lang:2.6" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: net.coreprotect:coreprotect:22.2" level="project" />
   </component>
 </module>
