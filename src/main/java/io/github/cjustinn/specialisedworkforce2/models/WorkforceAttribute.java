@@ -21,7 +21,7 @@ public class WorkforceAttribute {
         this.type = WorkforceAttributeType.valueOf(section.getString("type"));
         this.levelThreshold = section.getInt("levelThreshold");
         this.paymentModifier = section.contains("paymentModifier") ? section.getDouble("paymentModifier") : 1.0;
-        this.experienceModifier = section.contains("experienceModifier") ? section.getDouble("experienceModifier") : 1.01;
+        this.experienceModifier = section.contains("experienceModifier") ? section.getDouble("experienceModifier") : 1.0;
         this.equations = new HashMap<String, String>() {{
             if (section.getKeys(false).contains("chance")) {
                 put("chance", section.getString("chance"));
