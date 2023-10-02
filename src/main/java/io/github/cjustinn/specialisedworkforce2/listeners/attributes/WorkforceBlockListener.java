@@ -80,7 +80,9 @@ public class WorkforceBlockListener implements Listener {
 
                 // Iterate through all relevant attributes, apply their modifiers once each. Payment and experience addition should only run ONCE per profession.
                 Random generator = new Random();
-                for (final WorkforceAttribute attribute : profession.getProfession().getAttributesByType(WorkforceAttributeType.BONUS_BLOCK_DROPS, profession.getLevel())) {
+                final List<WorkforceAttribute> attributes = profession.getProfession().getAttributesByType(WorkforceAttributeType.BONUS_BLOCK_DROPS, profession.getLevel())
+                        .stream().filter((attribute) -> attribute.targets(event.getBlockState().getBlockData().getMaterial().name())).collect(Collectors.toList());
+                for (final WorkforceAttribute attribute : attributes) {
                     final double activationChance = EvaluationService.evaluate(attribute.getEquation("chance").replace("{level}", String.valueOf(profession.getLevel())));
                     final double activationRoll = generator.nextDouble();
 
