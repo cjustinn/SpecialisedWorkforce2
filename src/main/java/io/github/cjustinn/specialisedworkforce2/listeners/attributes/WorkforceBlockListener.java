@@ -6,7 +6,10 @@ import io.github.cjustinn.specialisedworkforce2.models.WorkforceAttribute;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import io.github.cjustinn.specialisedworkforce2.services.*;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Sapling;
@@ -14,14 +17,13 @@ import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockDropItemEvent;
-import org.bukkit.event.block.BlockPistonExtendEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.*;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -92,6 +94,60 @@ public class WorkforceBlockListener implements Listener {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        String direction = event.getDirection().name();
+        List<Block> affectedBlocks = event.getBlocks();
+
+        Map<Character, Integer> movement = new HashMap<Character, Integer>() {{
+            put('x', direction == "EAST" ? 1 : (direction == "WEST" ? -1 : 0));
+            put('y', direction == "UP" ? 1 : (direction == "DOWN" ? -1 : 0));
+            put('z', direction == "SOUTH" ? 1 : (direction == "NORTH" ? -1 : 0));
+        }};
+
+        this.handlePistonEvent(affectedBlocks, movement);
+    }
+
+    @EventHandler
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        String direction = event.getDirection().name();
+        List<Block> affectedBlocks = event.getBlocks();
+
+        Map<Character, Integer> movement = new HashMap<Character, Integer>() {{
+            put('x', direction == "EAST" ? -1 : (direction == "WEST" ? 1 : 0));
+            put('y', direction == "UP" ? -1 : (direction == "DOWN" ? 1 : 0));
+            put('z', direction == "SOUTH" ? -1 : (direction == "NORTH" ? 1 : 0));
+        }};
+
+        this.handlePistonEvent(affectedBlocks, movement);
+    }
+
+    private void handlePistonEvent(List<Block> affectedBlocks, Map<Character, Integer> movement) {
+        // Appropriately mark all previous positions as removed (if applicable).
+        for (Block currentBlock : affectedBlocks) {
+            final boolean isNatural = CoreProtectService.IsBlockNatural(currentBlock);
+            if (!isNatural) {
+                CoreProtectService.LogBlockInteraction("remove", null, currentBlock.getLocation(), currentBlock.getType(), currentBlock.getBlockData());
+                currentBlock.removeMetadata("non-natural", SpecialisedWorkforce2.plugin);
+            }
+        }
+
+        // Appropriately mark all new positions as placed (if applicable).
+        for (Block currentBlock : affectedBlocks) {
+            final boolean isNatural = CoreProtectService.IsBlockNatural(currentBlock);
+            if (!isNatural) {
+                Block updatedBlock = currentBlock.getWorld().getBlockAt(
+                        currentBlock.getLocation().getBlockX() + movement.get('x'),
+                        currentBlock.getLocation().getBlockY() + movement.get('y'),
+                        currentBlock.getLocation().getBlockZ() + movement.get('z')
+                );
+
+                CoreProtectService.LogBlockInteraction("place", null, updatedBlock.getLocation(), updatedBlock.getType(), updatedBlock.getBlockData());
+                updatedBlock.setMetadata("non-natural", new FixedMetadataValue(SpecialisedWorkforce2.plugin, true));
             }
         }
     }
