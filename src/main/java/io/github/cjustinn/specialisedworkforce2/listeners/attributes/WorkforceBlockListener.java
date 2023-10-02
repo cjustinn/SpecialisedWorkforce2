@@ -104,9 +104,9 @@ public class WorkforceBlockListener implements Listener {
         List<Block> affectedBlocks = event.getBlocks();
 
         Map<Character, Integer> movement = new HashMap<Character, Integer>() {{
-            put('x', direction == "EAST" ? 1 : (direction == "WEST" ? -1 : 0));
-            put('y', direction == "UP" ? 1 : (direction == "DOWN" ? -1 : 0));
-            put('z', direction == "SOUTH" ? 1 : (direction == "NORTH" ? -1 : 0));
+            put('x', direction.equals("EAST") ? 1 : (direction.equals("WEST") ? -1 : 0));
+            put('y', direction.equals("UP") ? 1 : (direction.equals("DOWN") ? -1 : 0));
+            put('z', direction.equals("SOUTH") ? 1 : (direction.equals("NORTH") ? -1 : 0));
         }};
 
         this.handlePistonEvent(affectedBlocks, movement);
@@ -118,9 +118,9 @@ public class WorkforceBlockListener implements Listener {
         List<Block> affectedBlocks = event.getBlocks();
 
         Map<Character, Integer> movement = new HashMap<Character, Integer>() {{
-            put('x', direction == "EAST" ? -1 : (direction == "WEST" ? 1 : 0));
-            put('y', direction == "UP" ? -1 : (direction == "DOWN" ? 1 : 0));
-            put('z', direction == "SOUTH" ? -1 : (direction == "NORTH" ? 1 : 0));
+            put('x', direction.equals("EAST") ? -1 : (direction.equals("WEST") ? 1 : 0));
+            put('y', direction.equals("UP") ? -1 : (direction.equals("DOWN") ? 1 : 0));
+            put('z', direction.equals("SOUTH") ? -1 : (direction.equals("NORTH") ? 1 : 0));
         }};
 
         this.handlePistonEvent(affectedBlocks, movement);
