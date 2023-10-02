@@ -35,26 +35,20 @@ public class WorkforceEntityListener implements Listener {
 
         if (relevantProfessions.size() > 0) {
             for (final WorkforceUserProfession profession : relevantProfessions) {
-                // Pay the player (if payment / economic integration is enabled).
-                if (profession.getProfession().isPaymentEnabled()) {
-                    EconomyService.ModifyFunds(
-                            killer,
-                            EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel())
-                    );
-                }
-
-                // Add job experience to the relevant user profession.
-                final int experienceToAdd = (int) EvaluationService.evaluate(
+                final double basePayment = EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel());
+                final int baseExperience = (int) EvaluationService.evaluate(
                         WorkforceService.earnedExperienceEquation.replace("{level}", String.valueOf(profession.getLevel()))
                 );
-
-                profession.addExperience(experienceToAdd);
+                double paymentModifier = 0.0, experienceModifier = 0.0;
 
                 // Iterate through any relevant attributes, activate them as necessary.
                 Random generator = new Random();
                 final List<WorkforceAttribute> attributes = profession.getProfession().getAttributesByType(WorkforceAttributeType.BONUS_MOB_DROPS, profession.getLevel())
                         .stream().filter((attribute) -> attribute.targets(event.getEntity().getType().name())).collect(Collectors.toList());
                 for (WorkforceAttribute attribute : attributes) {
+                    paymentModifier = attribute.paymentModifier > paymentModifier ? attribute.paymentModifier : paymentModifier;
+                    experienceModifier = attribute.experienceModifier > experienceModifier ? attribute.experienceModifier : experienceModifier;
+
                     final double activationRoll = generator.nextDouble();
                     final double activationChance = EvaluationService.evaluate(
                             attribute.getEquation("chance").replace("{level}", String.valueOf(profession.getLevel()))
@@ -70,6 +64,14 @@ public class WorkforceEntityListener implements Listener {
                         }
                     }
                 }
+
+                // Pay the player (if payment / economic integration is enabled).
+                if (profession.getProfession().isPaymentEnabled()) {
+                    EconomyService.ModifyFunds(killer, basePayment * paymentModifier);
+                }
+
+                // Add job experience to the relevant user profession.
+                profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
             }
         }
     }

@@ -32,16 +32,16 @@ public class WorkforcePlayerListener implements Listener {
 
         if (relevantProfessions.size() > 0) {
             for (WorkforceUserProfession profession : relevantProfessions) {
-                // Give the user profession experience - at a quarter the configured rate.
-                final int experienceToAdd = (int) Math.ceil(EvaluationService.evaluate(
-                        WorkforceService.earnedExperienceEquation.replace("{level}", String.valueOf(profession.getLevel()))
-                ) * 0.25);
-
-                profession.addExperience(experienceToAdd);
+                final int baseExperience = (int) Math.ceil(EvaluationService.evaluate(WorkforceService.earnedExperienceEquation.replace("{level}", String.valueOf(profession.getLevel()))));
+                double experienceModifier = 0.0;
 
                 // Iterate through any relevant attributes, trigger them if they proc.
                 Random generator = new Random();
-                for (final WorkforceAttribute attribute : profession.getProfession().getAttributesByType(WorkforceAttributeType.DURABILITY_SAVE, profession.getLevel())) {
+                final List<WorkforceAttribute> attributes = profession.getProfession().getAttributesByType(WorkforceAttributeType.DURABILITY_SAVE, profession.getLevel())
+                        .stream().filter((attribute) -> attribute.targets(itemType.name())).collect(Collectors.toList());
+                for (final WorkforceAttribute attribute : attributes) {
+                    experienceModifier = attribute.experienceModifier > experienceModifier ? attribute.experienceModifier : experienceModifier;
+
                     final double activationChance = EvaluationService.evaluate(attribute.getEquation("chance").replace("{level}", String.valueOf(profession.getLevel())));
                     final double activationRoll = generator.nextDouble();
 
@@ -49,6 +49,8 @@ public class WorkforcePlayerListener implements Listener {
                         event.setCancelled(true);
                     }
                 }
+
+                profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
             }
         }
     }
