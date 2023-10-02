@@ -21,6 +21,7 @@ import org.bukkit.event.block.*;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,26 +64,20 @@ public class WorkforceBlockListener implements Listener {
         if (relevantProfessions.size() > 0) {
             // If the attribute targets the broken block, apply the modifier and reward the player.
             for (final WorkforceUserProfession profession : relevantProfessions) {
-                if (profession.getProfession().isPaymentEnabled()) {
-                    // Pay the player, if economy integration is enabled, as well as payment is enabled for the profession.
-                    EconomyService.ModifyFunds(
-                            player,
-                            EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel())
-                    );
-                }
-
-                // Add job experience to the relevant user profession.
-                final int experienceToAdd = (int) EvaluationService.evaluate(
+                final double basePayment = EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel());
+                final int baseExperience = (int) EvaluationService.evaluate(
                         WorkforceService.earnedExperienceEquation.replace("{level}", String.valueOf(profession.getLevel()))
                 );
-
-                profession.addExperience(experienceToAdd);
+                double paymentModifier = 0.0, experienceModifier = 0.0;
 
                 // Iterate through all relevant attributes, apply their modifiers once each. Payment and experience addition should only run ONCE per profession.
                 Random generator = new Random();
                 final List<WorkforceAttribute> attributes = profession.getProfession().getAttributesByType(WorkforceAttributeType.BONUS_BLOCK_DROPS, profession.getLevel())
                         .stream().filter((attribute) -> attribute.targets(event.getBlockState().getBlockData().getMaterial().name())).collect(Collectors.toList());
                 for (final WorkforceAttribute attribute : attributes) {
+                    paymentModifier = attribute.paymentModifier > paymentModifier ? attribute.paymentModifier : paymentModifier;
+                    experienceModifier = attribute.experienceModifier > experienceModifier ? attribute.experienceModifier : experienceModifier;
+
                     final double activationChance = EvaluationService.evaluate(attribute.getEquation("chance").replace("{level}", String.valueOf(profession.getLevel())));
                     final double activationRoll = generator.nextDouble();
 
@@ -96,6 +91,13 @@ public class WorkforceBlockListener implements Listener {
                         }
                     }
                 }
+
+                if (profession.getProfession().isPaymentEnabled()) {
+                    // Pay the player, if economy integration is enabled, as well as payment is enabled for the profession.
+                    EconomyService.ModifyFunds(player, basePayment * paymentModifier);
+                }
+
+                profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
             }
         }
     }
