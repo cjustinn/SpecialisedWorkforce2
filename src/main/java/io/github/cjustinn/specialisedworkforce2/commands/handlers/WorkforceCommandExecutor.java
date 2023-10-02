@@ -22,7 +22,7 @@ public class WorkforceCommandExecutor implements CommandExecutor {
         if (sender instanceof Player) {
             Player player = (Player) sender;
 
-            if (args.length == 0 || ((args.length == 1 || args.length == 2) && args[0].equals("join"))) {
+            if ((args.length == 0 && WorkforceService.GetActiveUserProfessions(player.getUniqueId().toString()).size() == 0) || ((args.length == 1 || args.length == 2) && args[0].equals("join"))) {
                 final @Nullable String target = args.length == 2 ? args[1] : null;
                 if (target != null && !WorkforceService.professions.stream().anyMatch((prof) -> prof.group.equalsIgnoreCase(target))) {
                     player.sendMessage(Component.text("That is not a profession group!").color(NamedTextColor.RED));
@@ -37,7 +37,7 @@ public class WorkforceCommandExecutor implements CommandExecutor {
                         player.openInventory(inv);
                     }
                 }
-            } else if (args.length == 1 && args[0].equals("status")) {
+            } else if ((args.length == 0 && WorkforceService.GetActiveUserProfessions(player.getUniqueId().toString()).size() > 0) || (args.length == 1 && args[0].equals("status"))) {
                 if (WorkforceService.GetActiveUserProfessions(player.getUniqueId().toString()).size() < 1) {
                     player.sendMessage(Component.text("You are not a member of any professions!").color(NamedTextColor.RED));
                 } else {
