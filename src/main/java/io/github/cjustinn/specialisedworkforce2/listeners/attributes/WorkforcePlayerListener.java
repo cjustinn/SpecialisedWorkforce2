@@ -79,7 +79,7 @@ public class WorkforcePlayerListener implements Listener {
         if (caught != null) {
             List<WorkforceUserProfession> relevantProfessions = WorkforceService.GetRelevantActiveUserProfessions(
                     player.getUniqueId().toString(),
-                    new WorkforceAttributeType[]{ WorkforceAttributeType.BONUS_FISHING_DROPS },
+                    new WorkforceAttributeType[]{ WorkforceAttributeType.BONUS_FISHING_DROPS, WorkforceAttributeType.FISHING_EXPERIENCE },
                     caught.getItemStack().getType().name()
             );
 
@@ -100,7 +100,7 @@ public class WorkforcePlayerListener implements Listener {
                     double experienceModifier = 0.0, paymentModifier = 0.0;
 
                     List<WorkforceAttribute> attributes = profession.getProfession().getRelevantAttributes(
-                            new WorkforceAttributeType[]{ WorkforceAttributeType.BONUS_FISHING_DROPS },
+                            new WorkforceAttributeType[]{ WorkforceAttributeType.BONUS_FISHING_DROPS, WorkforceAttributeType.FISHING_EXPERIENCE },
                             profession.getLevel(),
                             caught.getItemStack().getType().name()
                     );
@@ -118,7 +118,6 @@ public class WorkforcePlayerListener implements Listener {
                         final double activationRoll = generator.nextDouble();
 
                         if (activationRoll <= activationChance) {
-
                             final int increaseAmount = (int) Math.ceil(
                                     EvaluationService.evaluate(
                                             EvaluationService.populateEquation(
@@ -127,10 +126,15 @@ public class WorkforcePlayerListener implements Listener {
                                             )
                                     )
                             );
-                            ItemStack itemStack = caught.getItemStack();
-                            itemStack.setAmount(itemStack.getAmount() + increaseAmount);
 
-                            caught.setItemStack(itemStack);
+                            if (attribute.type == WorkforceAttributeType.FISHING_EXPERIENCE) {
+                                event.setExpToDrop(event.getExpToDrop() + increaseAmount);
+                            } else if (attribute.type == WorkforceAttributeType.BONUS_FISHING_DROPS) {
+                                ItemStack itemStack = caught.getItemStack();
+                                itemStack.setAmount(itemStack.getAmount() + increaseAmount);
+
+                                caught.setItemStack(itemStack);
+                            }
                         }
                     }
 
