@@ -16,6 +16,7 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.ItemStack;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -26,28 +27,38 @@ public class WorkforcePlayerListener implements Listener {
         Player player = event.getPlayer();
         Material itemType = event.getItem().getType();
 
-        List<WorkforceUserProfession> relevantProfessions =
-                WorkforceService.GetActiveUserProfessionsWithAttribute(player.getUniqueId().toString(), WorkforceAttributeType.DURABILITY_SAVE)
-                        .stream().filter(
-                                (userProfession) -> {
-                                    return userProfession.getProfession().getAttributesByType(WorkforceAttributeType.DURABILITY_SAVE, userProfession.getLevel())
-                                            .stream().anyMatch((attribute) -> attribute.targets(itemType.name()));
-                                }
-                        ).collect(Collectors.toList());
+        List<WorkforceUserProfession> relevantProfessions = WorkforceService.GetRelevantActiveUserProfessions(
+                player.getUniqueId().toString(),
+                new WorkforceAttributeType[]{ WorkforceAttributeType.DURABILITY_SAVE },
+                itemType.name()
+        );
 
         if (relevantProfessions.size() > 0) {
             for (WorkforceUserProfession profession : relevantProfessions) {
-                final int baseExperience = (int) Math.ceil(EvaluationService.evaluate(WorkforceService.earnedExperienceEquation.replace("{level}", String.valueOf(profession.getLevel()))));
+                final int baseExperience = (int) EvaluationService.evaluate(
+                        EvaluationService.populateEquation(
+                                WorkforceService.earnedExperienceEquation,
+                                new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                        )
+                );
                 double experienceModifier = 0.0;
 
                 // Iterate through any relevant attributes, trigger them if they proc.
                 Random generator = new Random();
-                final List<WorkforceAttribute> attributes = profession.getProfession().getAttributesByType(WorkforceAttributeType.DURABILITY_SAVE, profession.getLevel())
-                        .stream().filter((attribute) -> attribute.targets(itemType.name())).collect(Collectors.toList());
+                final List<WorkforceAttribute> attributes = profession.getProfession().getRelevantAttributes(
+                        new WorkforceAttributeType[]{ WorkforceAttributeType.DURABILITY_SAVE },
+                        profession.getLevel(),
+                        itemType.name()
+                );
                 for (final WorkforceAttribute attribute : attributes) {
                     experienceModifier = attribute.experienceModifier > experienceModifier ? attribute.experienceModifier : experienceModifier;
 
-                    final double activationChance = EvaluationService.evaluate(attribute.getEquation("chance").replace("{level}", String.valueOf(profession.getLevel())));
+                    final double activationChance = EvaluationService.evaluate(
+                            EvaluationService.populateEquation(
+                                    attribute.getEquation("chance"),
+                                    new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                            )
+                    );
                     final double activationRoll = generator.nextDouble();
 
                     if (activationRoll <= activationChance) {
@@ -66,34 +77,56 @@ public class WorkforcePlayerListener implements Listener {
         @Nullable Item caught = event.getCaught() instanceof Item ? (Item) event.getCaught() : null;
 
         if (caught != null) {
-            List<WorkforceUserProfession> relevantProfessions =
-                    WorkforceService.GetActiveUserProfessionsWithAttribute(player.getUniqueId().toString(), WorkforceAttributeType.BONUS_FISHING_DROPS)
-                            .stream().filter((userProfession) -> {
-                                return userProfession.getProfession().getAttributesByType(WorkforceAttributeType.BONUS_FISHING_DROPS).stream().anyMatch((attribute) -> attribute.targets(caught.getItemStack().getType().name()));
-                            }).collect(Collectors.toList());
+            List<WorkforceUserProfession> relevantProfessions = WorkforceService.GetRelevantActiveUserProfessions(
+                    player.getUniqueId().toString(),
+                    new WorkforceAttributeType[]{ WorkforceAttributeType.BONUS_FISHING_DROPS },
+                    caught.getItemStack().getType().name()
+            );
 
             if (relevantProfessions.size() > 0) {
                 for (WorkforceUserProfession profession : relevantProfessions) {
-                    final int baseExperience = (int) Math.ceil(EvaluationService.evaluate(WorkforceService.earnedExperienceEquation.replace("{level}", String.valueOf(profession.getLevel()))));
-                    final double basePayment = EvaluationService.evaluate(profession.getProfession().paymentEquation.replace("{level}", String.valueOf(profession.getLevel())));
+                    final int baseExperience = (int) EvaluationService.evaluate(
+                            EvaluationService.populateEquation(
+                                    WorkforceService.earnedExperienceEquation,
+                                    new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                            )
+                    );
+                    final double basePayment = EvaluationService.evaluate(
+                            EvaluationService.populateEquation(
+                                    profession.getProfession().paymentEquation,
+                                    new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                            )
+                    );
                     double experienceModifier = 0.0, paymentModifier = 0.0;
 
-                    List<WorkforceAttribute> attributes = profession.getProfession().getAttributesByType(WorkforceAttributeType.BONUS_FISHING_DROPS).stream().filter(
-                            (attribute) -> attribute.targets(caught.getItemStack().getType().name())
-                    ).collect(Collectors.toList());
+                    List<WorkforceAttribute> attributes = profession.getProfession().getRelevantAttributes(
+                            new WorkforceAttributeType[]{ WorkforceAttributeType.BONUS_FISHING_DROPS },
+                            profession.getLevel(),
+                            caught.getItemStack().getType().name()
+                    );
                     Random generator = new Random();
                     for (WorkforceAttribute attribute : attributes) {
                         experienceModifier = attribute.experienceModifier > experienceModifier ? attribute.experienceModifier : experienceModifier;
                         paymentModifier = attribute.paymentModifier > paymentModifier ? attribute.paymentModifier : paymentModifier;
 
-                        final double activationChance = EvaluationService.evaluate(attribute.getEquation("chance").replace("{level}", String.valueOf(profession.getLevel())));
+                        final double activationChance = EvaluationService.evaluate(
+                                EvaluationService.populateEquation(
+                                        attribute.getEquation("chance"),
+                                        new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                )
+                        );
                         final double activationRoll = generator.nextDouble();
 
                         if (activationRoll <= activationChance) {
-                            final int increaseAmount = (int) Math.ceil(EvaluationService.evaluate(
-                                    attribute.getEquation("amount").replace("{level}", String.valueOf(profession.getLevel()))
-                            ));
 
+                            final int increaseAmount = (int) Math.ceil(
+                                    EvaluationService.evaluate(
+                                            EvaluationService.populateEquation(
+                                                    attribute.getEquation("amount"),
+                                                    new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                            )
+                                    )
+                            );
                             ItemStack itemStack = caught.getItemStack();
                             itemStack.setAmount(itemStack.getAmount() + increaseAmount);
 

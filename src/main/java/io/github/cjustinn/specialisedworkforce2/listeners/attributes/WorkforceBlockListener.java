@@ -53,37 +53,51 @@ public class WorkforceBlockListener implements Listener {
 
         // Check if the player has any attributes with the BONUS_BLOCK_DROPS attribute.
         // If the player has the attribute, check if any of their targets include the block broken.
-        List<WorkforceUserProfession> relevantProfessions =
-                WorkforceService.GetActiveUserProfessionsWithAttribute(player.getUniqueId().toString(), WorkforceAttributeType.BONUS_BLOCK_DROPS)
-                        .stream().filter(
-                                (userProfession) -> userProfession.getProfession().getAttributesByType(WorkforceAttributeType.BONUS_BLOCK_DROPS, userProfession.getLevel()).stream().anyMatch(
-                                        (attribute) -> attribute.targets(event.getBlockState().getBlockData().getMaterial().name())
-                                )
-                        ).collect(Collectors.toList());
+        List<WorkforceUserProfession> relevantProfessions = WorkforceService.GetRelevantActiveUserProfessions(
+                player.getUniqueId().toString(),
+                new WorkforceAttributeType[] {
+                        WorkforceAttributeType.BONUS_BLOCK_DROPS
+                },
+                event.getBlockState().getBlockData().getMaterial().name()
+        );
 
         if (relevantProfessions.size() > 0) {
             // If the attribute targets the broken block, apply the modifier and reward the player.
             for (final WorkforceUserProfession profession : relevantProfessions) {
                 final double basePayment = EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel());
                 final int baseExperience = (int) EvaluationService.evaluate(
-                        WorkforceService.earnedExperienceEquation.replace("{level}", String.valueOf(profession.getLevel()))
+                        EvaluationService.populateEquation(
+                                WorkforceService.earnedExperienceEquation,
+                                new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                        )
                 );
                 double paymentModifier = 0.0, experienceModifier = 0.0;
 
                 // Iterate through all relevant attributes, apply their modifiers once each. Payment and experience addition should only run ONCE per profession.
                 Random generator = new Random();
-                final List<WorkforceAttribute> attributes = profession.getProfession().getAttributesByType(WorkforceAttributeType.BONUS_BLOCK_DROPS, profession.getLevel())
-                        .stream().filter((attribute) -> attribute.targets(event.getBlockState().getBlockData().getMaterial().name())).collect(Collectors.toList());
+                final List<WorkforceAttribute> attributes = profession.getProfession().getRelevantAttributes(
+                        new WorkforceAttributeType[]{ WorkforceAttributeType.BONUS_BLOCK_DROPS },
+                        profession.getLevel(),
+                        event.getBlockState().getBlockData().getMaterial().name()
+                );
                 for (final WorkforceAttribute attribute : attributes) {
                     paymentModifier = attribute.paymentModifier > paymentModifier ? attribute.paymentModifier : paymentModifier;
                     experienceModifier = attribute.experienceModifier > experienceModifier ? attribute.experienceModifier : experienceModifier;
 
-                    final double activationChance = EvaluationService.evaluate(attribute.getEquation("chance").replace("{level}", String.valueOf(profession.getLevel())));
+                    final double activationChance = EvaluationService.evaluate(
+                            EvaluationService.populateEquation(
+                                    attribute.getEquation("chance"),
+                                    new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                            )
+                    );
                     final double activationRoll = generator.nextDouble();
 
                     if (activationRoll <= activationChance) {
                         final int increaseAmount = (int) Math.ceil(EvaluationService.evaluate(
-                                attribute.getEquation("amount").replace("{level}", String.valueOf(profession.getLevel()))
+                                EvaluationService.populateEquation(
+                                        attribute.getEquation("amount"),
+                                        new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                )
                         ));
 
                         for (Item dropItem : event.getItems()) {

@@ -113,5 +113,18 @@ public class WorkforceProfession {
         return Arrays.stream(new WorkforceAttribute[]{}).collect(Collectors.toList());
     }
 
+    public @NotNull List<WorkforceAttribute> getRelevantAttributes(WorkforceAttributeType[] types, int playerLevel, String target) {
+        List<WorkforceAttribute> attributes = new ArrayList<>();
+        for (WorkforceAttributeType type : types) {
+            attributes.addAll(
+                    this.getAttributesByType(type, playerLevel).stream().filter(
+                            (attribute) -> attribute.targets(target)
+                    ).collect(Collectors.toList())
+            );
+        }
+
+        return attributes;
+    }
+
 
 }
