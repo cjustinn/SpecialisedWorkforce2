@@ -4,6 +4,8 @@ import net.milkbowl.vault.economy.Economy;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
+import java.util.HashMap;
+
 public class EconomyService {
     private static Economy economy;
     public static boolean economyIntegrationEnabled = false;
@@ -20,6 +22,11 @@ public class EconomyService {
     }
 
     public static double CalculateMonetaryReward(final String equation, final int level) {
-        return EvaluationService.evaluate(equation.replace("{level}", String.valueOf(level)));
+        return EvaluationService.evaluate(
+                EvaluationService.populateEquation(
+                        equation,
+                        new HashMap<String, Object>() {{ put("level", level); }}
+                )
+        );
     }
 }

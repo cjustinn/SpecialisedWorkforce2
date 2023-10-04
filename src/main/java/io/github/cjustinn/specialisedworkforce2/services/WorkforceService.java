@@ -39,6 +39,22 @@ public class WorkforceService {
         ).collect(Collectors.toList());
     }
 
+    public static List<WorkforceUserProfession> GetRelevantActiveUserProfessions(String user, WorkforceAttributeType[] types, String target) {
+        return new ArrayList<WorkforceUserProfession>() {{
+            for (WorkforceAttributeType type : types) {
+                addAll(
+                        WorkforceService.GetActiveUserProfessionsWithAttribute(user, type).stream().filter(
+                                (userProfession) -> {
+                                    return userProfession.getProfession().getAttributesByType(type).stream().anyMatch(
+                                            (attribute) -> attribute.targets(target)
+                                    );
+                                }
+                        ).collect(Collectors.toList())
+                );
+            }
+        }};
+    }
+
     public static List<WorkforceUserProfession> GetUserProfessions(String user) {
         return userProfessions.stream().filter(
                 (profession) -> {
