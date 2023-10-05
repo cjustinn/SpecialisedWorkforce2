@@ -7,6 +7,7 @@ import io.github.cjustinn.specialisedworkforce2.commands.tabcompleters.Workforce
 import io.github.cjustinn.specialisedworkforce2.listeners.CustomInventoryListener;
 import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforceBlockListener;
 import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforceEntityListener;
+import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforceInventoryListener;
 import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforcePlayerListener;
 import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLCredentials;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
@@ -373,6 +374,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new WorkforceBlockListener(), this);
         getServer().getPluginManager().registerEvents(new WorkforcePlayerListener(), this);
         getServer().getPluginManager().registerEvents(new WorkforceEntityListener(), this);
+        getServer().getPluginManager().registerEvents(new WorkforceInventoryListener(), this);
 
         return true;
     }
