@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.SmithItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
@@ -92,6 +93,68 @@ public class WorkforceInventoryListener implements Listener {
                             EconomyService.ModifyFunds(player, (basePayment * paymentModifier) * totalCrafted);
                         }
                     }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onItemSmithingComplete(SmithItemEvent event) {
+        Player player = (Player) event.getWhoClicked();
+        final String playerId = player.getUniqueId().toString();
+        final String templateUsed = event.getInventory().getInputTemplate().getType().name();
+
+        List<WorkforceUserProfession> relevantProfessions = WorkforceService.GetRelevantActiveUserProfessions(
+                playerId,
+                new WorkforceAttributeType[]{ WorkforceAttributeType.SMITHING_EXPERIENCE },
+                templateUsed
+        );
+
+        if (relevantProfessions.size() > 0) {
+            for (final WorkforceUserProfession profession : relevantProfessions) {
+                final double basePayment = EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel());
+                final int baseExperience = (int) Math.ceil(
+                        EvaluationService.evaluate(
+                                EvaluationService.populateEquation(
+                                        WorkforceService.earnedExperienceEquation,
+                                        new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                )
+                        )
+                );
+
+                double paymentModifier = 0.0, experienceModifier = 0.0;
+
+                Random generator = new Random();
+                List<WorkforceAttribute> attributes = profession.getProfession().getRelevantAttributes(
+                        new WorkforceAttributeType[]{ WorkforceAttributeType.SMITHING_EXPERIENCE },
+                        profession.getLevel(),
+                        templateUsed
+                );
+
+                for (final WorkforceAttribute attribute : attributes) {
+                    paymentModifier = Math.max(attribute.paymentModifier, paymentModifier);
+                    experienceModifier = Math.max(attribute.experienceModifier, experienceModifier);
+
+                    final double activationChance = EvaluationService.evaluate(
+                            EvaluationService.populateEquation(
+                                    attribute.getEquation("chance"),
+                                    new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                            )
+                    );
+
+                    final double activationRoll = generator.nextDouble();
+                    if (activationRoll <= activationChance) {
+                        final int amount = (int) Math.ceil(EvaluationService.evaluate(
+                                EvaluationService.populateEquation(attribute.getEquation("amount"), new HashMap<String, Object>() {{ put("level", profession.getLevel()); }})
+                        ));
+
+                        player.giveExp(amount);
+                    }
+                }
+
+                profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
+                if (profession.getProfession().isPaymentEnabled()) {
+                    EconomyService.ModifyFunds(player, basePayment * paymentModifier);
                 }
             }
         }
