@@ -23,6 +23,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 public class CustomInventoryListener implements Listener {
@@ -31,7 +32,7 @@ public class CustomInventoryListener implements Listener {
         final String userId = ((Player) event.getWhoClicked()).getUniqueId().toString();
         InventoryView inventoryView = event.getView();
 
-        if (((TextComponent) inventoryView.title()).content().contains(CustomInventoryType.JOIN.title.content()) && event.getCurrentItem() != null) {
+        if (inventoryView.title() == CustomInventoryType.JOIN.title && event.getCurrentItem() != null) {
             ItemStack item = event.getCurrentItem();
             ItemMeta meta = item.getItemMeta();
 
@@ -77,7 +78,7 @@ public class CustomInventoryListener implements Listener {
             }
         }
 
-        if (((TextComponent) inventoryView.title()).content().contains(CustomInventoryType.JOIN.title.content()) || ((TextComponent) inventoryView.title()).content().contains(CustomInventoryType.STATUS.title.content()) || ((TextComponent) inventoryView.title()).content().contains(CustomInventoryType.LEADERBOARD.title.content())) {
+        if (Arrays.stream(CustomInventoryType.values()).anyMatch((type) -> inventoryView.title() == type.title)) {
             event.setCancelled(true);
         }
     }
