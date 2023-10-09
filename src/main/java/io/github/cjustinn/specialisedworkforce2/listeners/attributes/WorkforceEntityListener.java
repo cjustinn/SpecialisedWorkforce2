@@ -81,11 +81,11 @@ public class WorkforceEntityListener implements Listener {
 
                     // Pay the player (if payment / economic integration is enabled).
                     if (profession.getProfession().isPaymentEnabled()) {
-                        EconomyService.ModifyFunds(killer, basePayment * paymentModifier);
+                        EconomyService.RewardPlayer(killer.getUniqueId().toString(), basePayment * paymentModifier, profession.getProfession().name);
                     }
 
                     // Add job experience to the relevant user profession.
-                    profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
+                    WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier));
                 }
             }
         }
@@ -152,9 +152,9 @@ public class WorkforceEntityListener implements Listener {
                         }
                     }
 
-                    profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
+                    WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier));
                     if (profession.getProfession().isPaymentEnabled()) {
-                        EconomyService.ModifyFunds(player, basePayment * paymentModifier);
+                        EconomyService.RewardPlayer(player.getUniqueId().toString(), basePayment * paymentModifier, profession.getProfession().name);
                     }
                 }
             }

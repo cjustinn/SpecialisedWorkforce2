@@ -78,6 +78,7 @@ public class SQLService {
                             break;
                         case "double":
                             statement.setDouble(property.index, (double) property.value);
+                            break;
                         default:
                             statement.setString(property.index, (String) property.value);
                             break;

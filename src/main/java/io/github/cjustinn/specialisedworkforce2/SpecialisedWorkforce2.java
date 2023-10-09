@@ -4,19 +4,20 @@ import io.github.cjustinn.specialisedworkforce2.commands.handlers.WorkforceAdmin
 import io.github.cjustinn.specialisedworkforce2.commands.handlers.WorkforceCommandExecutor;
 import io.github.cjustinn.specialisedworkforce2.commands.tabcompleters.WorkforceAdminTabCompleter;
 import io.github.cjustinn.specialisedworkforce2.commands.tabcompleters.WorkforceCommandTabCompleter;
+import io.github.cjustinn.specialisedworkforce2.enums.AttributeLogType;
 import io.github.cjustinn.specialisedworkforce2.listeners.CustomInventoryListener;
-import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforceBlockListener;
-import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforceEntityListener;
-import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforceInventoryListener;
-import io.github.cjustinn.specialisedworkforce2.listeners.attributes.WorkforcePlayerListener;
+import io.github.cjustinn.specialisedworkforce2.listeners.WorkforceJoinLeaveListener;
+import io.github.cjustinn.specialisedworkforce2.listeners.attributes.*;
 import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLCredentials;
+import io.github.cjustinn.specialisedworkforce2.models.WorkforceInteractionLogValue;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
+import io.github.cjustinn.specialisedworkforce2.models.WorkforceRewardBacklogItem;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import io.github.cjustinn.specialisedworkforce2.services.*;
 import net.coreprotect.CoreProtect;
-import net.coreprotect.CoreProtectAPI;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -108,6 +109,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
             defaults.put("experienceRequirementEquation", "100 * (1 + ({level} * 5))");
             defaults.put("quitLossRate", 0.2);
             defaults.put("useEconomy", true);
+            defaults.put("currencySymbol", "$");
 
             for (Map.Entry<String, Object> entry : defaults.entrySet()) {
                 if (!this.pluginConfig.contains(entry.getKey())) {
@@ -214,6 +216,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
 
         // Fetch economy-related settings.
         EconomyService.economyIntegrationEnabled = this.integrateEconomy();
+        EconomyService.currencySymbol = this.pluginConfig.getString("currencySymbol");
 
         // Fetch job-related settings.
         WorkforceService.maximumLevel = this.pluginConfig.getInt("maxLevel", 50);
@@ -277,10 +280,12 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
 
     private boolean loadUserData() {
         final boolean databaseInitialised = this.initialiseDatabase();
-        boolean userDataFetched = false;
+        boolean userDataFetched = false,  loggingDataFetched = false, backlogDataFetched = false;
 
         if (databaseInitialised) {
             userDataFetched = this.fetchUserData();
+            loggingDataFetched = this.fetchAttributeLogs();
+            backlogDataFetched = this.fetchBackloggedRewards();
         } else {
             LoggingService.WriteError(
                     String.format(
@@ -290,7 +295,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
             );
         }
 
-        return databaseInitialised && userDataFetched;
+        return databaseInitialised && userDataFetched && loggingDataFetched && backlogDataFetched;
     }
 
     private boolean initialiseDatabase() {
@@ -310,13 +315,90 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
                 userTableQuery.executeUpdate();
                 userTableQuery.close();
 
+                final PreparedStatement logTableQuery = SQLService.connection.prepareStatement("CREATE TABLE IF NOT EXISTS workforce_interaction_log(interactionType INT NOT NULL,world TEXT NOT NULL,x DOUBLE(9,2) NOT NULL,y DOUBLE(9,2) NOT NULL,z DOUBLE(9,2) NOT NULL,uuid VARCHAR(36) NOT NULL,PRIMARY KEY(world, x, y, z));");
+                logTableQuery.executeUpdate();
+                logTableQuery.close();
+
+                final PreparedStatement rewardBacklogTableQuery = SQLService.connection.prepareStatement("CREATE TABLE IF NOT EXISTS workforce_reward_backlog(rewardType INT NOT NULL,uuid VARCHAR(36) NOT NULL,amount DOUBLE(9, 2) NOT NULL, rewardFrom TEXT DEFAULT NULL,PRIMARY KEY(rewardType, uuid, rewardFrom));");
+                rewardBacklogTableQuery.executeUpdate();
+                rewardBacklogTableQuery.close();
+
                 tablesCreated = true;
             } catch (SQLException err) {
+                LoggingService.WriteError("Unable to create tables: " + err.getMessage());
                 tablesCreated = false;
             }
         }
 
         return connectionEstablished && tablesCreated;
+    }
+
+    private boolean fetchBackloggedRewards() {
+        ResultSet backlogResults = SQLService.RunQuery("SELECT rewardType, uuid, amount, rewardFrom FROM workforce_reward_backlog;");
+        if (backlogResults != null) {
+            try {
+                while (backlogResults.next()) {
+                    final int rewardTypeInt = backlogResults.getInt(1);
+                    final String uuid = backlogResults.getString(2);
+                    final double amount = backlogResults.getDouble(3);
+                    final String cause = backlogResults.getString(4);
+
+                    AttributeLoggingService.rewardBacklog.add(
+                            new WorkforceRewardBacklogItem(
+                                    rewardTypeInt,
+                                    uuid,
+                                    amount,
+                                    cause
+                            )
+                    );
+                }
+
+                LoggingService.WriteMessage(String.format("Successfully loaded %s backlogged rewards.", AttributeLoggingService.rewardBacklog.size()));
+
+                return true;
+            } catch (SQLException err) {
+                LoggingService.WriteError(String.format("Failed to load backlogged rewards: %s", err.getMessage()));
+                return false;
+            }
+        } else {
+            LoggingService.WriteError("Could not fetch backlogged reward data!");
+            return false;
+        }
+    }
+
+    private boolean fetchAttributeLogs() {
+        ResultSet logResults = SQLService.RunQuery("SELECT interactionType, world, x, y, z, uuid FROM workforce_interaction_log;");
+        if (logResults != null) {
+            try {
+                while (logResults.next()) {
+                    final int typeInt = logResults.getInt(1);
+                    final Optional<AttributeLogType> optionalType = Arrays.stream(AttributeLogType.values()).filter((t) -> t.value == typeInt).findFirst();
+
+                    final AttributeLogType type = optionalType.isPresent() ? optionalType.get() : null;
+                    final String worldName = logResults.getString(2);
+                    final double worldX = logResults.getDouble(3);
+                    final double worldY = logResults.getDouble(4);
+                    final double worldZ = logResults.getDouble(5);
+                    final String uuid = logResults.getString(6);
+
+                    switch (type) {
+                        case FURNACE:
+                            AttributeLoggingService.logs.put(new Location(Bukkit.getWorld(worldName), worldX, worldY, worldZ), new WorkforceInteractionLogValue(uuid, type));
+                            break;
+                    }
+                }
+
+                LoggingService.WriteMessage("Successfully loaded all block interaction logs.");
+
+                return true;
+            } catch (SQLException err) {
+                LoggingService.WriteError(String.format("Failed to load interaction logs: %s", err.getMessage()));
+                return false;
+            }
+        } else {
+            LoggingService.WriteError("Could not fetch logging data!");
+            return false;
+        }
     }
 
     private boolean fetchUserData() {
@@ -375,6 +457,8 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new WorkforcePlayerListener(), this);
         getServer().getPluginManager().registerEvents(new WorkforceEntityListener(), this);
         getServer().getPluginManager().registerEvents(new WorkforceInventoryListener(), this);
+        getServer().getPluginManager().registerEvents(new WorkforceLoggingListener(), this);
+        getServer().getPluginManager().registerEvents(new WorkforceJoinLeaveListener(), this);
 
         return true;
     }

@@ -30,13 +30,6 @@ import java.util.stream.Collectors;
 
 public class WorkforceBlockListener implements Listener {
     @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        Block block = event.getBlockPlaced();
-
-        block.setMetadata("non-natural", new FixedMetadataValue(SpecialisedWorkforce2.plugin, true));
-    }
-
-    @EventHandler
     public void onBlockDropItem(BlockDropItemEvent event) {
         // If the broken block is a non-fully-grown crop, return immediately - we don't care.
         // Also check to see if the broken block was a natural or player-placed block, eventually.
@@ -108,64 +101,10 @@ public class WorkforceBlockListener implements Listener {
 
                 if (profession.getProfession().isPaymentEnabled()) {
                     // Pay the player, if economy integration is enabled, as well as payment is enabled for the profession.
-                    EconomyService.ModifyFunds(player, basePayment * paymentModifier);
+                    EconomyService.RewardPlayer(player.getUniqueId().toString(), basePayment * paymentModifier, profession.getProfession().name);
                 }
 
-                profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPistonExtend(BlockPistonExtendEvent event) {
-        String direction = event.getDirection().name();
-        List<Block> affectedBlocks = event.getBlocks();
-
-        Map<Character, Integer> movement = new HashMap<Character, Integer>() {{
-            put('x', direction.equals("EAST") ? 1 : (direction.equals("WEST") ? -1 : 0));
-            put('y', direction.equals("UP") ? 1 : (direction.equals("DOWN") ? -1 : 0));
-            put('z', direction.equals("SOUTH") ? 1 : (direction.equals("NORTH") ? -1 : 0));
-        }};
-
-        this.handlePistonEvent(affectedBlocks, movement);
-    }
-
-    @EventHandler
-    public void onPistonRetract(BlockPistonRetractEvent event) {
-        String direction = event.getDirection().name();
-        List<Block> affectedBlocks = event.getBlocks();
-
-        Map<Character, Integer> movement = new HashMap<Character, Integer>() {{
-            put('x', direction.equals("EAST") ? -1 : (direction.equals("WEST") ? 1 : 0));
-            put('y', direction.equals("UP") ? -1 : (direction.equals("DOWN") ? 1 : 0));
-            put('z', direction.equals("SOUTH") ? -1 : (direction.equals("NORTH") ? 1 : 0));
-        }};
-
-        this.handlePistonEvent(affectedBlocks, movement);
-    }
-
-    private void handlePistonEvent(List<Block> affectedBlocks, Map<Character, Integer> movement) {
-        // Appropriately mark all previous positions as removed (if applicable).
-        for (Block currentBlock : affectedBlocks) {
-            final boolean isNatural = CoreProtectService.IsBlockNatural(currentBlock);
-            if (!isNatural) {
-                CoreProtectService.LogBlockInteraction("remove", null, currentBlock.getLocation(), currentBlock.getType(), currentBlock.getBlockData());
-                currentBlock.removeMetadata("non-natural", SpecialisedWorkforce2.plugin);
-            }
-        }
-
-        // Appropriately mark all new positions as placed (if applicable).
-        for (Block currentBlock : affectedBlocks) {
-            final boolean isNatural = CoreProtectService.IsBlockNatural(currentBlock);
-            if (!isNatural) {
-                Block updatedBlock = currentBlock.getWorld().getBlockAt(
-                        currentBlock.getLocation().getBlockX() + movement.get('x'),
-                        currentBlock.getLocation().getBlockY() + movement.get('y'),
-                        currentBlock.getLocation().getBlockZ() + movement.get('z')
-                );
-
-                CoreProtectService.LogBlockInteraction("place", null, updatedBlock.getLocation(), updatedBlock.getType(), updatedBlock.getBlockData());
-                updatedBlock.setMetadata("non-natural", new FixedMetadataValue(SpecialisedWorkforce2.plugin, true));
+                WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier));
             }
         }
     }
