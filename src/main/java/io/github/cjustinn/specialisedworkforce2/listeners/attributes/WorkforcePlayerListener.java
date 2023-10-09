@@ -66,7 +66,7 @@ public class WorkforcePlayerListener implements Listener {
                     }
                 }
 
-                profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
+                WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier));
             }
         }
     }
@@ -138,9 +138,9 @@ public class WorkforcePlayerListener implements Listener {
                         }
                     }
 
-                    profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
+                    WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier));
                     if (profession.getProfession().isPaymentEnabled()) {
-                        EconomyService.ModifyFunds(player, basePayment * paymentModifier);
+                        EconomyService.RewardPlayer(player.getUniqueId().toString(), basePayment * paymentModifier, profession.getProfession().name);
                     }
                 }
             }

@@ -1,17 +1,16 @@
 package io.github.cjustinn.specialisedworkforce2.listeners.attributes;
 
+import io.github.cjustinn.specialisedworkforce2.enums.AttributeLogInteractionMode;
+import io.github.cjustinn.specialisedworkforce2.enums.AttributeLogType;
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceAttributeType;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceAttribute;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
-import io.github.cjustinn.specialisedworkforce2.services.EconomyService;
-import io.github.cjustinn.specialisedworkforce2.services.EvaluationService;
-import io.github.cjustinn.specialisedworkforce2.services.WorkforceService;
-import org.bukkit.Material;
+import io.github.cjustinn.specialisedworkforce2.services.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.CraftItemEvent;
-import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.FurnaceSmeltEvent;
 import org.bukkit.event.inventory.SmithItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -83,14 +82,14 @@ public class WorkforceInventoryListener implements Listener {
                                         )
                                 );
 
-                                player.giveExp(amount);
+                                WorkforceService.RewardPlayerMinecraftExperience(playerUuid, amount, profession.getProfession().name);
                             }
                         }
 
-                        profession.addExperience((int) Math.ceil((baseExperience * experienceModifier) * totalCrafted));
+                        WorkforceService.RewardPlayer(profession, (int) Math.ceil((baseExperience * experienceModifier) * totalCrafted));
 
                         if (profession.getProfession().isPaymentEnabled()) {
-                            EconomyService.ModifyFunds(player, (basePayment * paymentModifier) * totalCrafted);
+                            EconomyService.RewardPlayer(playerUuid, (basePayment * paymentModifier) * totalCrafted, profession.getProfession().name);
                         }
                     }
                 }
@@ -148,14 +147,83 @@ public class WorkforceInventoryListener implements Listener {
                                 EvaluationService.populateEquation(attribute.getEquation("amount"), new HashMap<String, Object>() {{ put("level", profession.getLevel()); }})
                         ));
 
-                        player.giveExp(amount);
+                        WorkforceService.RewardPlayerMinecraftExperience(playerId, amount, profession.getProfession().name);
                     }
                 }
 
-                profession.addExperience((int) Math.ceil(baseExperience * experienceModifier));
+                WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier));
+
                 if (profession.getProfession().isPaymentEnabled()) {
-                    EconomyService.ModifyFunds(player, basePayment * paymentModifier);
+                    EconomyService.RewardPlayer(playerId, basePayment * paymentModifier, profession.getProfession().name);
                 }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onItemSmelted(FurnaceSmeltEvent event) {
+        if (AttributeLoggingService.LogExists(event.getBlock().getLocation(), AttributeLogType.FURNACE)) {
+            String smelterUuid = AttributeLoggingService.logs.get(event.getBlock().getLocation()).uuid;
+            List<WorkforceUserProfession> relevantProfessions = WorkforceService.GetRelevantActiveUserProfessions(
+                    smelterUuid,
+                    new WorkforceAttributeType[] {
+                            WorkforceAttributeType.SMELTING_EXPERIENCE
+                    },
+                    event.getResult().getType().name()
+            );
+
+            if (relevantProfessions.size() > 0) {
+                for (final WorkforceUserProfession profession : relevantProfessions) {
+                    final double basePayment = EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel());
+                    final int baseExperience = (int) Math.ceil(
+                            EvaluationService.evaluate(
+                                    EvaluationService.populateEquation(
+                                            WorkforceService.earnedExperienceEquation,
+                                            new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                    )
+                            )
+                    );
+
+                    double paymentModifier = 0.0, experienceModifier = 0.0;
+
+                    Random generator = new Random();
+                    List<WorkforceAttribute> attributes = profession.getProfession().getRelevantAttributes(
+                            new WorkforceAttributeType[]{ WorkforceAttributeType.SMELTING_EXPERIENCE },
+                            profession.getLevel(),
+                            event.getResult().getType().name()
+                    );
+
+                    for (final WorkforceAttribute attribute : attributes) {
+                        paymentModifier = Math.max(paymentModifier, attribute.paymentModifier);
+                        experienceModifier = Math.max(experienceModifier, attribute.experienceModifier);
+
+                        final double activationChance = EvaluationService.evaluate(
+                                EvaluationService.populateEquation(
+                                        attribute.getEquation("chance"),
+                                        new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                )
+                        );
+
+                        final double activationRoll = generator.nextDouble();
+                        if (activationRoll <= activationChance) {
+                            final int amount = (int) Math.ceil(EvaluationService.evaluate(
+                                    EvaluationService.populateEquation(attribute.getEquation("amount"), new HashMap<String, Object>() {{ put("level", profession.getLevel()); }})
+                            ));
+
+                            WorkforceService.RewardPlayerMinecraftExperience(smelterUuid, amount, profession.getProfession().name);
+                        }
+                    }
+
+                    if (profession.getProfession().isPaymentEnabled()) {
+                        EconomyService.RewardPlayer(smelterUuid, basePayment * paymentModifier, profession.getProfession().name);
+                    }
+
+                    WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier));
+                }
+            }
+
+            if (event.getSource().getAmount() == 1) {
+                AttributeLoggingService.LogInteraction(AttributeLogInteractionMode.REMOVE, event.getBlock().getLocation());
             }
         }
     }

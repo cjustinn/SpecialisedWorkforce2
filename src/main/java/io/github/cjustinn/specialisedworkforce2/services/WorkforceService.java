@@ -1,12 +1,14 @@
 package io.github.cjustinn.specialisedworkforce2.services;
 
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceAttributeType;
+import io.github.cjustinn.specialisedworkforce2.enums.WorkforceRewardType;
 import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLProperty;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -151,5 +153,48 @@ public class WorkforceService {
         }
 
         return true;
+    }
+
+    public static void RewardPlayerMinecraftExperience(String recipient, int amount, String cause) {
+        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(recipient));
+        if (offlinePlayer.isOnline()) {
+            offlinePlayer.getPlayer().giveExp(amount);
+        } else {
+            if (!AttributeLoggingService.BacklogReward(WorkforceRewardType.PROFESSION_EXPERIENCE, recipient, amount, cause)) {
+                LoggingService.WriteError(
+                        String.format(
+                                "Unable to backlog minecraft experience reward for user %s: %d for %s profession.",
+                                recipient,
+                                amount,
+                                cause
+                        )
+                );
+            }
+        }
+    }
+
+    public static void RewardPlayer(WorkforceUserProfession profession, int amount) {
+        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(profession.uuid));
+        if (offlinePlayer.isOnline()) {
+            profession.addExperience(amount);
+        } else {
+            if (!AttributeLoggingService.BacklogReward(WorkforceRewardType.PROFESSION_EXPERIENCE, profession.uuid, amount, profession.getProfession().name)) {
+                LoggingService.WriteError(
+                        String.format(
+                                "Unable to backlog profession experience reward for user %s: %d for %s profession.",
+                                profession.uuid,
+                                amount,
+                                profession.getProfession().name
+                        )
+                );
+            }
+        }
+    }
+
+    public static void RewardPlayer(String professionName, String recipient, int amount) {
+        WorkforceUserProfession relevantProfession = GetActiveUserProfessions(recipient).stream().filter((p) -> p.getProfession().name.equals(professionName)).collect(Collectors.toList()).get(0);
+        if (relevantProfession != null) {
+            relevantProfession.addExperience(amount);
+        }
     }
 }
