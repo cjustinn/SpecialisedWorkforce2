@@ -6,14 +6,17 @@ import io.github.cjustinn.specialisedworkforce2.enums.WorkforceAttributeType;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceAttribute;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import io.github.cjustinn.specialisedworkforce2.services.*;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceSmeltEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.SmithItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.StonecutterInventory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -91,6 +94,81 @@ public class WorkforceInventoryListener implements Listener {
                         if (profession.getProfession().isPaymentEnabled()) {
                             EconomyService.RewardPlayer(playerUuid, (basePayment * paymentModifier) * totalCrafted, profession.getProfession().name);
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onStonecuttingCompleted(InventoryClickEvent event) {
+        Player player = (Player) event.getWhoClicked();
+        String playerUuid = player.getUniqueId().toString();
+
+        if (player != null && event.getInventory() instanceof StonecutterInventory && event.getCurrentItem().getType() != Material.AIR) {
+            // Current Item: Crafted item (count not included), Input Item: resource cut
+            List<WorkforceUserProfession> relevantProfessions = WorkforceService.GetRelevantActiveUserProfessions(
+                    playerUuid,
+                    new WorkforceAttributeType[]{ WorkforceAttributeType.STONECUTTER_EXPERIENCE },
+                    event.getCurrentItem().getType().name()
+            );
+
+            if (relevantProfessions.size() > 0) {
+                final int cutAmount = calculateTotalItemsCrafted(
+                        event.getCurrentItem(),
+                        new ItemStack[]{ ((StonecutterInventory) event.getInventory()).getInputItem() },
+                        event.isShiftClick(),
+                        player.getInventory()
+                );
+
+                for (final WorkforceUserProfession profession : relevantProfessions) {
+                    final double basePayment = EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel());
+                    final int baseExperience = (int) Math.ceil(EvaluationService.evaluate(
+                                    EvaluationService.populateEquation(
+                                            WorkforceService.earnedExperienceEquation,
+                                            new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                    )
+                            )
+                    );
+
+                    double paymentModifier = 0.0, experienceModifier = 0.0;
+
+                    Random generator = new Random();
+                    List<WorkforceAttribute> attributes = profession.getProfession().getRelevantAttributes(
+                            new WorkforceAttributeType[]{ WorkforceAttributeType.STONECUTTER_EXPERIENCE },
+                            profession.getLevel(),
+                            event.getCurrentItem().getType().name()
+                    );
+
+                    for (WorkforceAttribute attribute : attributes) {
+                        paymentModifier = attribute.paymentModifier > paymentModifier ? attribute.paymentModifier : paymentModifier;
+                        experienceModifier = attribute.experienceModifier > experienceModifier ? attribute.experienceModifier : experienceModifier;
+
+                        final double activationChance = EvaluationService.evaluate(
+                                EvaluationService.populateEquation(
+                                        attribute.getEquation("chance"),
+                                        new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                )
+                        );
+                        final double activationRoll = generator.nextDouble();
+
+                        if (activationRoll <= activationChance) {
+                            final int amount = (int) Math.ceil(
+                                    EvaluationService.evaluate(
+                                            EvaluationService.populateEquation(
+                                                    attribute.getEquation("amount"),
+                                                    new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                            )
+                                    )
+                            );
+
+                            WorkforceService.RewardPlayerMinecraftExperience(playerUuid, amount * cutAmount, profession.getProfession().name);
+                        }
+                    }
+
+                    WorkforceService.RewardPlayer(profession, (int) Math.ceil((baseExperience * experienceModifier) * cutAmount));
+                    if (profession.getProfession().isPaymentEnabled()) {
+                        EconomyService.RewardPlayer(playerUuid, (basePayment * paymentModifier) * cutAmount, profession.getProfession().name);
                     }
                 }
             }
