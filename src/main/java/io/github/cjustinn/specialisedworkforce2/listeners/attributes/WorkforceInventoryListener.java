@@ -10,10 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.CraftItemEvent;
-import org.bukkit.event.inventory.FurnaceSmeltEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.SmithItemEvent;
+import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.StonecutterInventory;
@@ -302,6 +299,44 @@ public class WorkforceInventoryListener implements Listener {
 
             if (event.getSource().getAmount() == 1) {
                 AttributeLoggingService.LogInteraction(AttributeLogInteractionMode.REMOVE, event.getBlock().getLocation());
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPrepareAnvil(PrepareAnvilEvent event) {
+        Player player = (Player) event.getViewers().get(0);
+        if (player != null && event.getInventory().getResult() != null) {
+            final String playerUuid = player.getUniqueId().toString();
+
+            List<WorkforceUserProfession> relevantProfessions = WorkforceService.GetRelevantActiveUserProfessions(
+                    playerUuid,
+                    new WorkforceAttributeType[]{ WorkforceAttributeType.REDUCE_ANVIL_COST },
+                    event.getInventory().getResult().getType().name()
+            );
+
+            if (relevantProfessions.size() > 0) {
+                double costsModifier = 0.0;
+
+                for (final WorkforceUserProfession profession : relevantProfessions) {
+                    List<WorkforceAttribute> attributes = profession.getProfession().getRelevantAttributes(
+                            new WorkforceAttributeType[]{ WorkforceAttributeType.REDUCE_ANVIL_COST },
+                            profession.getLevel(),
+                            event.getInventory().getResult().getType().name()
+                    );
+
+                    for (WorkforceAttribute attribute : attributes) {
+                        costsModifier = Math.max(costsModifier, EvaluationService.evaluate(
+                                EvaluationService.populateEquation(attribute.getEquation("amount"), new HashMap<String, Object>() {{ put("level", profession.getLevel()); }})
+                        ));
+                    }
+                }
+
+                final int repairExperienceCost = event.getInventory().getRepairCost();
+                final int repairResourceCost = event.getInventory().getRepairCostAmount();
+
+                event.getInventory().setRepairCost(Math.max(1, (int) Math.floor(repairExperienceCost * (1.0 - costsModifier))));
+                event.getInventory().setRepairCostAmount(Math.max(1, (int) Math.floor(repairResourceCost * (1.0 - costsModifier))));
             }
         }
     }
