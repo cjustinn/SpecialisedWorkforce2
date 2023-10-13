@@ -6,6 +6,7 @@ import io.github.cjustinn.specialisedworkforce2.enums.AttributeLogType;
 import io.github.cjustinn.specialisedworkforce2.services.AttributeLoggingService;
 import io.github.cjustinn.specialisedworkforce2.services.CoreProtectService;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,6 +21,7 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.*;
 import org.bukkit.metadata.FixedMetadataValue;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -100,19 +102,19 @@ public class WorkforceLoggingListener implements Listener {
 
     @EventHandler
     public void onAddToInventory(InventoryClickEvent event) {
-        InventoryAction[] cursorActions = new InventoryAction[] {
-                InventoryAction.PICKUP_ALL,
-                InventoryAction.PLACE_ALL,
-                InventoryAction.PLACE_SOME,
-                InventoryAction.PLACE_ONE,
-                InventoryAction.SWAP_WITH_CURSOR,
-                InventoryAction.MOVE_TO_OTHER_INVENTORY
-        };
-
         InventoryAction action = event.getAction();
         InventoryType.SlotType slotType = event.getSlotType();
 
         if (event.getInventory() instanceof FurnaceInventory) {
+            InventoryAction[] cursorActions = new InventoryAction[] {
+                    InventoryAction.PICKUP_ALL,
+                    InventoryAction.PLACE_ALL,
+                    InventoryAction.PLACE_SOME,
+                    InventoryAction.PLACE_ONE,
+                    InventoryAction.SWAP_WITH_CURSOR,
+                    InventoryAction.MOVE_TO_OTHER_INVENTORY
+            };
+
             FurnaceInventory furnace = (FurnaceInventory) event.getInventory();
             final ItemStack target = ((Arrays.stream(cursorActions).anyMatch((cursorAction) -> cursorAction == action) || (action == InventoryAction.PICKUP_HALF && event.getCurrentItem().getAmount() == 1)) && slotType == InventoryType.SlotType.CRAFTING) ? event.getCursor() : event.getCurrentItem();
 
@@ -124,7 +126,116 @@ public class WorkforceLoggingListener implements Listener {
             } else if (shouldRemoveLog) {
                 this.logBlockInteraction(AttributeLogInteractionMode.REMOVE, furnace.getLocation());
             }
+        } else if (event.getInventory() instanceof BrewerInventory){
+            InventoryAction[] cursorActions = new InventoryAction[] {
+                    InventoryAction.PICKUP_ALL,
+                    InventoryAction.PICKUP_HALF,
+                    InventoryAction.PLACE_ALL,
+                    InventoryAction.PLACE_SOME,
+                    InventoryAction.PLACE_ONE,
+                    InventoryAction.SWAP_WITH_CURSOR
+            };
+
+            BrewerInventory inventory = (BrewerInventory) event.getInventory();
+            final ItemStack target = Arrays.stream(cursorActions).anyMatch((cursorAction) -> cursorAction == action) ? event.getCursor() : event.getCurrentItem();
+
+            final boolean shouldLog = this.shouldAddBrewingLog(inventory, target, action, slotType);
+            final boolean shouldRemoveLog = this.shouldRemoveBrewingLog(inventory, target, action, slotType);
+
+            if (shouldLog) {
+                AttributeLoggingService.LogInteraction(
+                        AttributeLogType.BREWING_STAND,
+                        AttributeLogInteractionMode.CREATE,
+                        inventory.getLocation(),
+                        event.getWhoClicked().getUniqueId().toString()
+                );
+            } else if (shouldRemoveLog) {
+                AttributeLoggingService.LogInteraction(
+                        AttributeLogInteractionMode.REMOVE,
+                        inventory.getLocation()
+                );
+            }
         }
+    }
+
+    private boolean shouldRemoveBrewingLog(BrewerInventory inventory, ItemStack targetItem, InventoryAction action, InventoryType.SlotType slot) {
+        boolean remove = false;
+
+        if (
+            action == InventoryAction.MOVE_TO_OTHER_INVENTORY
+                && slot == InventoryType.SlotType.FUEL
+                && this.availableSpacesForType(inventory.getViewers().get(0).getInventory(), targetItem.getType()) >= targetItem.getAmount()
+                && (inventory.getIngredient() != null && inventory.getIngredient().getAmount() == targetItem.getAmount())
+        ) {
+            remove = true;
+        } else if (
+                (action == InventoryAction.PICKUP_ALL || action == InventoryAction.PICKUP_HALF)
+                && slot == InventoryType.SlotType.FUEL
+                && (targetItem == null || targetItem.getType() == Material.AIR)
+        ) {
+            remove = true;
+        }
+
+        return remove;
+    }
+
+    private int availableSpacesForType(PlayerInventory inventory, Material item) {
+        int available = 0;
+
+        for (int i = 0; i < 36; i++) {
+            @Nullable ItemStack slotItem = inventory.getItem(i);
+
+            if (slotItem == null)
+                available += item.getMaxStackSize();
+            else if (
+                    slotItem != null
+                    && slotItem.getType() == item
+                    && (slotItem.getAmount() < slotItem.getMaxStackSize())
+            )
+                available += (item.getMaxStackSize() - slotItem.getAmount());
+        }
+
+        return available;
+    }
+
+    private boolean shouldAddBrewingLog(BrewerInventory inventory, ItemStack targetItem, InventoryAction action, InventoryType.SlotType slot) {
+        boolean valid = false;
+        Material[] validIngredients = new Material[] {
+                Material.NETHER_WART,
+                Material.REDSTONE,
+                Material.GLOWSTONE_DUST,
+                Material.FERMENTED_SPIDER_EYE,
+                Material.GUNPOWDER,
+                Material.DRAGON_BREATH,
+                Material.SUGAR,
+                Material.RABBIT_FOOT,
+                Material.GLISTERING_MELON_SLICE,
+                Material.SPIDER_EYE,
+                Material.PUFFERFISH,
+                Material.MAGMA_CREAM,
+                Material.GOLDEN_CARROT,
+                Material.BLAZE_POWDER,
+                Material.GHAST_TEAR,
+                Material.TURTLE_HELMET,
+                Material.PHANTOM_MEMBRANE
+        };
+
+        if (
+                (action.equals(InventoryAction.MOVE_TO_OTHER_INVENTORY)
+                        && (slot == InventoryType.SlotType.CONTAINER || slot == InventoryType.SlotType.QUICKBAR)
+                        && Arrays.stream(validIngredients).anyMatch((validItem) -> validItem == targetItem.getType())
+                        && (inventory.getIngredient() == null || (inventory.getIngredient() != null && inventory.getIngredient().getType() == targetItem.getType() && inventory.getIngredient().getAmount() < inventory.getIngredient().getMaxStackSize())))
+        ) {
+            valid = true;
+        } else if (
+                (action.equals(InventoryAction.PLACE_ALL) || action.equals(InventoryAction.PLACE_ONE) || action.equals(InventoryAction.PLACE_SOME) || action.equals(InventoryAction.SWAP_WITH_CURSOR))
+                        && slot == InventoryType.SlotType.FUEL
+                        && Arrays.stream(validIngredients).anyMatch((validItem) -> validItem == targetItem.getType())
+        ) {
+            valid = true;
+        }
+
+        return valid;
     }
 
     private boolean shouldRemoveFurnaceLog(FurnaceInventory inventory, ItemStack targetItem, InventoryAction action, InventoryType.SlotType slot) {

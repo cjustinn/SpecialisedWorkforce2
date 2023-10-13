@@ -3,9 +3,14 @@ package io.github.cjustinn.specialisedworkforce2.listeners.attributes;
 import io.github.cjustinn.specialisedworkforce2.enums.AttributeLogInteractionMode;
 import io.github.cjustinn.specialisedworkforce2.enums.AttributeLogType;
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceAttributeType;
+import io.github.cjustinn.specialisedworkforce2.models.PotionDuration;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceAttribute;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import io.github.cjustinn.specialisedworkforce2.services.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,11 +19,14 @@ import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.StonecutterInventory;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
-import java.util.Arrays;
-import java.util.HashMap;
+import javax.annotation.Nullable;
+import java.util.*;
 import java.util.List;
-import java.util.Random;
+import java.util.stream.Collectors;
 
 public class WorkforceInventoryListener implements Listener {
     @EventHandler
@@ -410,6 +418,149 @@ public class WorkforceInventoryListener implements Listener {
                 event.getInventory().setRepairCostAmount(Math.max(1, (int) Math.floor(repairResourceCost * (1.0 - costsModifier))));
             }
         }
+    }
+
+    @EventHandler
+    public void onPotionBrewed(BrewEvent event) {
+        // Get all brewed types.
+        Map<String, Integer> brewedPotionTypes = new HashMap<String, Integer>();
+        for (PotionEffectType type : event.getResults().stream().map((potion) -> {
+            PotionMeta meta = (PotionMeta) potion.getItemMeta();
+            return meta.getBasePotionData().getType().getEffectType();
+        }).collect(Collectors.toList())) {
+            if (!brewedPotionTypes.containsKey(type.getName())) {
+                brewedPotionTypes.put(type.getName(), 1);
+            } else {
+                int amount = brewedPotionTypes.get(type.getName());
+                brewedPotionTypes.put(type.getName(), amount + 1);
+            }
+        }
+
+        @Nullable String brewerUuid =
+                AttributeLoggingService.LogExists(event.getContents().getLocation(), AttributeLogType.BREWING_STAND)
+                ? AttributeLoggingService.logs.get(event.getContents().getLocation()).uuid
+                : null;
+
+        if (brewerUuid != null) {
+            // Get all professions which target each of the potions.
+            List<WorkforceUserProfession> relevantProfessions = new ArrayList<WorkforceUserProfession>() {{
+                for (String type : brewedPotionTypes.keySet()) {
+                    addAll(WorkforceService.GetRelevantActiveUserProfessions(
+                            brewerUuid,
+                            new WorkforceAttributeType[] { WorkforceAttributeType.INCREASE_POTION_DURATION },
+                            type
+                    ));
+                }
+            }}.stream().distinct().collect(Collectors.toList());
+
+            if (relevantProfessions.size() > 0) {
+                for (final WorkforceUserProfession profession : relevantProfessions) {
+                    List<WorkforceAttribute> attributes = new ArrayList<WorkforceAttribute>() {{
+                        for (String type : brewedPotionTypes.keySet()) {
+                            List<WorkforceAttribute> relevantAttributes = profession.getProfession().getRelevantAttributes(
+                                    new WorkforceAttributeType[]{ WorkforceAttributeType.INCREASE_POTION_DURATION },
+                                    profession.getLevel(),
+                                    type
+                            );
+
+                            if (relevantAttributes.size() < 1) {
+                                brewedPotionTypes.remove(type);
+                            }
+
+                            addAll(relevantAttributes);
+                        }
+                    }}.stream().distinct().collect(Collectors.toList());
+                    for (WorkforceAttribute attribute : attributes) {
+                        final double basePayment = EconomyService.CalculateMonetaryReward(profession.getProfession().paymentEquation, profession.getLevel());
+                        final int baseExperience = (int) Math.ceil(
+                                EvaluationService.evaluate(
+                                        EvaluationService.populateEquation(
+                                                WorkforceService.earnedExperienceEquation,
+                                                new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                        )
+                                )
+                        );
+
+                        double paymentModifier = 0.0, experienceModifier = 0.0;
+                        int affectedCount = 0;
+
+                        paymentModifier = Math.max(paymentModifier, attribute.paymentModifier);
+                        experienceModifier = Math.max(experienceModifier, attribute.experienceModifier);
+
+                        final int amount = (int) Math.ceil(
+                                EvaluationService.evaluate(
+                                        EvaluationService.populateEquation(
+                                                attribute.getEquation("amount"),
+                                                new HashMap<String, Object>() {{ put("level", profession.getLevel()); }}
+                                        )
+                                )
+                        ) * 20;
+
+                        for (String type : brewedPotionTypes.keySet()) {
+                            if (attribute.targets(type)) {
+                                affectedCount += brewedPotionTypes.get(type);
+
+                                for (ItemStack potion : event.getResults()) {
+                                    if (potion != null && potion.getType() != Material.AIR) {
+                                        // Get the potion meta & it's base potion data.
+                                        PotionMeta potionMeta = (PotionMeta) potion.getItemMeta();
+                                        PotionEffectType potionType = potionMeta.getBasePotionData().getType().getEffectType();
+
+                                        if (potionType.getName().equals(type)) {
+                                            final boolean isExtended = potionMeta.getBasePotionData().isExtended();
+                                            final boolean isUpgraded = potionMeta.getBasePotionData().isUpgraded();
+
+                                            PotionDuration relevantDuration = PotionDuration.standards.get(potionType);
+                                            int duration = 0;
+
+                                            if (isExtended) {
+                                                duration = relevantDuration.getExtendedDuration() + amount;
+                                            } else if (isUpgraded) {
+                                                duration = relevantDuration.getUpgradedDuration() + amount;
+                                            } else {
+                                                duration = relevantDuration.getBaseDuration() + amount;
+                                            }
+
+                                            potionMeta.addCustomEffect(
+                                                    new PotionEffect(potionType, duration, isUpgraded ? 1 : 0),
+                                                    true
+                                            );
+
+                                            potionMeta.lore(
+                                                    new ArrayList<TextComponent>() {{
+                                                        add(
+                                                                Component.text(String.format(
+                                                                        "Brewed by %s %s",
+                                                                        getPreceedingQualifier(profession.getProfession().name),
+                                                                        profession.getProfession().name
+                                                                ), NamedTextColor.GOLD)
+                                                        );
+                                                    }}
+                                            );
+
+                                            potion.setItemMeta(potionMeta);
+                                        }
+                                    }
+                                }
+
+                                if (profession.getProfession().isPaymentEnabled()) {
+                                    EconomyService.RewardPlayer(brewerUuid, (basePayment * paymentModifier) * affectedCount, profession.getProfession().name);
+                                }
+
+                                WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier) * affectedCount);
+                            }
+                        }
+
+
+                    }
+                }
+            }
+        }
+    }
+
+    private String getPreceedingQualifier(String word) {
+        List<String> vowels = Arrays.asList(new String[] { "a", "e", "i", "o", "u" });
+        return vowels.stream().anyMatch((character) -> word.toLowerCase().startsWith(character)) ? "an" : "a";
     }
 
     private int calculateTotalItemsCrafted(final ItemStack result, final ItemStack[] craftingGridContents, final boolean shiftClickCraft, final PlayerInventory playerInventory) {
