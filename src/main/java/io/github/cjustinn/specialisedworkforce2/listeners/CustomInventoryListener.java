@@ -26,13 +26,13 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.Arrays;
 import java.util.UUID;
 
-public class CustomInventoryListener implements Listener {
+public class  CustomInventoryListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         final String userId = ((Player) event.getWhoClicked()).getUniqueId().toString();
         InventoryView inventoryView = event.getView();
 
-        if (inventoryView.title() == CustomInventoryType.JOIN.title && event.getCurrentItem() != null) {
+        if (((TextComponent) inventoryView.title()).content().contains(CustomInventoryType.JOIN.title.content()) && event.getCurrentItem() != null) {
             ItemStack item = event.getCurrentItem();
             ItemMeta meta = item.getItemMeta();
 
@@ -78,7 +78,7 @@ public class CustomInventoryListener implements Listener {
             }
         }
 
-        if (Arrays.stream(CustomInventoryType.values()).anyMatch((type) -> inventoryView.title() == type.title)) {
+        if (Arrays.stream(CustomInventoryType.values()).anyMatch((type) -> ((TextComponent) inventoryView.title()).content().contains(type.title.content()))) {
             event.setCancelled(true);
         }
     }
