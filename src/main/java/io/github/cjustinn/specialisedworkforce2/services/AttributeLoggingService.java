@@ -88,34 +88,32 @@ public class AttributeLoggingService {
         final boolean logAlreadyExists = LogExists(location, type);
 
         if (mode == AttributeLogInteractionMode.CREATE) {
-            if (type == AttributeLogType.FURNACE) {
-                final boolean existingLogMatchesValue = logAlreadyExists && logs.get(location).uuid.equals(uuid);
-                String query = "";
+            final boolean existingLogMatchesValue = logAlreadyExists && logs.get(location).uuid.equals(uuid);
+            String query = "";
 
-                if (logAlreadyExists && !existingLogMatchesValue) {
-                    query = "UPDATE workforce_interaction_log SET uuid = ? WHERE world = ? AND x = ? AND y = ? AND z = ?;";
-                    success = SQLService.RunUpdate(query, new MySQLProperty[] {
-                            new MySQLProperty("string", uuid, 1),
-                            new MySQLProperty("string", location.getWorld().getName(), 2),
-                            new MySQLProperty("integer", location.getBlockX(), 3),
-                            new MySQLProperty("integer", location.getBlockY(), 4),
-                            new MySQLProperty("integer", location.getBlockZ(), 5)
-                    });
-                } else if (!logAlreadyExists) {
-                    query = "INSERT INTO workforce_interaction_log (interactionType, world, x, y, z, uuid) VALUES (?, ?, ?, ?, ?, ?);";
-                    success = SQLService.RunUpdate(query, new MySQLProperty[] {
-                            new MySQLProperty("integer", type.value, 1),
-                            new MySQLProperty("string", location.getWorld().getName(), 2),
-                            new MySQLProperty("integer", location.getBlockX(), 3),
-                            new MySQLProperty("integer", location.getBlockY(), 4),
-                            new MySQLProperty("integer", location.getBlockZ(), 5),
-                            new MySQLProperty("string", uuid, 6)
-                    });
-                }
+            if (logAlreadyExists && !existingLogMatchesValue) {
+                query = "UPDATE workforce_interaction_log SET uuid = ? WHERE world = ? AND x = ? AND y = ? AND z = ?;";
+                success = SQLService.RunUpdate(query, new MySQLProperty[] {
+                        new MySQLProperty("string", uuid, 1),
+                        new MySQLProperty("string", location.getWorld().getName(), 2),
+                        new MySQLProperty("integer", location.getBlockX(), 3),
+                        new MySQLProperty("integer", location.getBlockY(), 4),
+                        new MySQLProperty("integer", location.getBlockZ(), 5)
+                });
+            } else if (!logAlreadyExists) {
+                query = "INSERT INTO workforce_interaction_log (interactionType, world, x, y, z, uuid) VALUES (?, ?, ?, ?, ?, ?);";
+                success = SQLService.RunUpdate(query, new MySQLProperty[] {
+                        new MySQLProperty("integer", type.value, 1),
+                        new MySQLProperty("string", location.getWorld().getName(), 2),
+                        new MySQLProperty("integer", location.getBlockX(), 3),
+                        new MySQLProperty("integer", location.getBlockY(), 4),
+                        new MySQLProperty("integer", location.getBlockZ(), 5),
+                        new MySQLProperty("string", uuid, 6)
+                });
+            }
 
-                if (success) {
-                    AttributeLoggingService.logs.put(location, new WorkforceInteractionLogValue(uuid, type));
-                }
+            if (success) {
+                AttributeLoggingService.logs.put(location, new WorkforceInteractionLogValue(uuid, type));
             }
         } else {
             success = LogInteraction(mode, location);
