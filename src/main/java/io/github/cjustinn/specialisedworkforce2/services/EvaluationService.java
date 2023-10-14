@@ -1,17 +1,33 @@
 package io.github.cjustinn.specialisedworkforce2.services;
 
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Value;
+import jdk.jshell.JShell;
+import jdk.jshell.Snippet;
+import jdk.jshell.SnippetEvent;
+import jdk.jshell.execution.LocalExecutionControlProvider;
 
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class EvaluationService {
+    public static @Nullable JShell context = null;
     public static double evaluate(String expression) {
-        try (Context context = Context.create()){
-            Value result = context.eval("js", expression);
-            return result.asDouble();
+        if (context == null) {
+            context = JShell.builder().executionEngine(new LocalExecutionControlProvider(), new HashMap<>()).build();
         }
+
+        double result = -1.0;
+        List<SnippetEvent> snippets = context.eval(expression);
+
+        for (SnippetEvent event : snippets) {
+            if (event.status() == Snippet.Status.VALID) {
+                result = Double.parseDouble(event.value());
+                break;
+            }
+        }
+
+        return result;
     }
 
     public static String populateEquation(String rawEquation, Map<String, Object> values) {
