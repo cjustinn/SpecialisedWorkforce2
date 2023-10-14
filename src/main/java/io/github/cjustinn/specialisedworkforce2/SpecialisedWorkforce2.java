@@ -14,6 +14,8 @@ import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceRewardBacklogItem;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import io.github.cjustinn.specialisedworkforce2.services.*;
+import jdk.jshell.JShell;
+import jdk.jshell.execution.LocalExecutionControlProvider;
 import net.coreprotect.CoreProtect;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
@@ -24,7 +26,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.graalvm.polyglot.Context;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +50,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
             LoggingService.WriteError("Plugin initialisation failed. SpecialisedWorkforce 2 is now disabled.");
             Bukkit.getPluginManager().disablePlugin(this);
         } else {
-            EvaluationService.context = Context.create();
+            EvaluationService.context = JShell.builder().executionEngine(new LocalExecutionControlProvider(), new HashMap<>()).build();
 
             LoggingService.WriteMessage("SpecialisedWorkforce 2 is running!");
         }
