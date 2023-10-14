@@ -12,19 +12,28 @@ import java.util.Map;
 
 public class EvaluationService {
     public static @Nullable JShell context = null;
+    private static Map<String, Double> resultsCache = new HashMap<String, Double>();
+
     public static double evaluate(String expression) {
         if (context == null) {
             context = JShell.builder().executionEngine(new LocalExecutionControlProvider(), new HashMap<>()).build();
         }
 
         double result = -1.0;
-        List<SnippetEvent> snippets = context.eval(expression);
 
-        for (SnippetEvent event : snippets) {
-            if (event.status() == Snippet.Status.VALID) {
-                result = Double.parseDouble(event.value());
-                break;
+        if (resultsCache.containsKey(expression)) {
+            result = resultsCache.get(expression);
+        } else {
+            List<SnippetEvent> snippets = context.eval(expression);
+
+            for (SnippetEvent event : snippets) {
+                if (event.status() == Snippet.Status.VALID) {
+                    result = Double.parseDouble(event.value());
+                    break;
+                }
             }
+
+            resultsCache.put(expression, result);
         }
 
         return result;
