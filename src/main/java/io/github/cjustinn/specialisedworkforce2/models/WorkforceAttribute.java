@@ -2,8 +2,6 @@ package io.github.cjustinn.specialisedworkforce2.models;
 
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceAttributeType;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.serialization.ConfigurationSerializable;
-import org.bukkit.configuration.serialization.SerializableAs;
 
 import java.util.HashMap;
 import java.util.List;
