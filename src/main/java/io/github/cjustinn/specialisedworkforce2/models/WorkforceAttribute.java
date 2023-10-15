@@ -37,8 +37,13 @@ public class WorkforceAttribute {
 
     public boolean targets(String item) {
         return this.targets.stream().anyMatch((target) -> {
+            final boolean hasPlaceholders = target.toLowerCase().contains("{*}");
             final String itemKey = target.toLowerCase().replace("{*}", "");
-            return item.toLowerCase().contains(itemKey);
+
+            if (hasPlaceholders)
+                return item.toLowerCase().contains(itemKey);
+            else
+                return item.toLowerCase().equals(itemKey);
         });
     }
 }
