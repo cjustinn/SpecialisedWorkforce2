@@ -114,6 +114,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
             defaults.put("quitLossRate", 0.2);
             defaults.put("useEconomy", true);
             defaults.put("currencySymbol", "$");
+            defaults.put("maxProfessionDescriptionLength", 150);
 
             for (Map.Entry<String, Object> entry : defaults.entrySet()) {
                 if (!this.pluginConfig.contains(entry.getKey())) {
@@ -151,11 +152,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
                 Map<String, Object> defaults = new HashMap<String, Object>();
                 defaults.put("farmer.name", "Farmer");
                 defaults.put("farmer.group", "primary");
-                defaults.put("farmer.description", new String[]{
-                        "Receives bonuses to crop yields",
-                        "and a chance to negate damage to",
-                        "their hoes."
-                });
+                defaults.put("farmer.description", "Receives bonuses to crop drop yields and a chance to negate damage to their hoes.");
                 defaults.put("farmer.icon.name", "WHEAT");
                 defaults.put("farmer.icon.customModelData", 1000);
                 defaults.put("farmer.payment.enabled", true);
@@ -227,6 +224,7 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
         WorkforceService.earnedExperienceEquation = this.pluginConfig.getString("experienceEarningEquation");
         WorkforceService.requiredExperienceEquation = this.pluginConfig.getString("experienceRequirementEquation");
         WorkforceService.jobQuitLossRate = this.pluginConfig.getDouble("quitLossRate");
+        WorkforceService.maxDescriptionLength = this.pluginConfig.getInt("maxProfessionDescriptionLength");
 
         ConfigurationSection maxJobSection = this.pluginConfig.getConfigurationSection("maxJobs");
         if (maxJobSection != null) {

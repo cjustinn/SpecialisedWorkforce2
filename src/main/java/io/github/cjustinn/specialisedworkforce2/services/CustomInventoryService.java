@@ -125,7 +125,11 @@ public class CustomInventoryService {
             final WorkforceProfession profession = professions.get(i).getProfession();
 
             List<TextComponent> description = new ArrayList<TextComponent>() {{
-                addAll(profession.description);
+                add(Component.text(profession.group, NamedTextColor.GRAY));
+                add(Component.text(""));
+                addAll(
+                        WorkforceService.ConformStringToMaxLength(profession.description)
+                );
             }};
 
             description.add(Component.text(""));
@@ -146,7 +150,7 @@ public class CustomInventoryService {
             }
 
             description.add(Component.text(""));
-            description.add(Component.text("Right-click to quit this profession.", NamedTextColor.RED));
+            description.addAll(WorkforceService.ConformStringToMaxLength("Right-click to quit this profession.", NamedTextColor.RED));
 
             inventory.setItem(i, profession.getIconItem(description));
         }
@@ -168,20 +172,31 @@ public class CustomInventoryService {
             final WorkforceProfession profession = professions.get(i);
             final boolean playerHasProfession = WorkforceService.UserHasActiveProfession(user, profession.id);
 
-            TextComponent prompt;
-            if (playerHasProfession)
-                prompt = Component.text("You already have this profession.").color(NamedTextColor.RED);
-            else if (!playerHasProfession && WorkforceService.GetActiveProfessionsInGroup(user, profession.group) >= WorkforceService.GetMaxJobsForGroup(profession.group))
-                prompt = Component.text(String.format("You cannot join another %s profession.", profession.group)).color(NamedTextColor.RED);
-            else
-                prompt = Component.text("Click to join this profession.").color(NamedTextColor.GREEN);
+            String prompt;
+            @Nullable NamedTextColor promptColor = null;
+            if (playerHasProfession) {
+                prompt = "You already have this profession.";
+                promptColor = NamedTextColor.RED;
+            } else if (!playerHasProfession && WorkforceService.GetActiveProfessionsInGroup(user, profession.group) >= WorkforceService.GetMaxJobsForGroup(profession.group)) {
+                prompt = String.format("You cannot join another %s profession.", profession.group);
+                promptColor = NamedTextColor.RED;
+            } else {
+                prompt = "Click to join this profession.";
+                promptColor = NamedTextColor.GREEN;
+            }
 
             List<TextComponent> description = new ArrayList<TextComponent>() {{
-                addAll(profession.description);
+                add(Component.text(profession.group, NamedTextColor.GRAY));
+                add(Component.text(""));
+                addAll(
+                        WorkforceService.ConformStringToMaxLength(profession.description)
+                );
             }};
 
             description.add(Component.text(""));
-            description.add(prompt);
+            description.addAll(WorkforceService.ConformStringToMaxLength(prompt, promptColor));
+
+            LoggingService.WriteMessage(String.format("Prompt: %s", prompt));
 
             inventory.setItem(i, profession.getIconItem(description));
         }

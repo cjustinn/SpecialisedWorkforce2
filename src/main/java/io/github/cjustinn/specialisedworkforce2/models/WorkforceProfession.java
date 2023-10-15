@@ -29,7 +29,7 @@ public class WorkforceProfession {
     public final String icon;
     public final int customModelData;
     public final String paymentEquation;
-    public final List<TextComponent> description;
+    public final String description;
 
     public final List<WorkforceAttribute> attributes;
 
@@ -41,11 +41,8 @@ public class WorkforceProfession {
         this.icon = section.getString("icon.name");
         this.customModelData = section.getInt("icon.customModelData");
         this.paymentEquation = section.getString("payment.equation");
-        this.description = section.getStringList("description").stream().map((line) -> Component.text(line)).collect(Collectors.toList());
+        this.description = section.getString("description");
         this.attributes = new ArrayList<WorkforceAttribute>();
-
-        this.description.add(0, Component.text(this.group).color(NamedTextColor.GRAY));
-        this.description.add(1, Component.text(""));
 
         final ConfigurationSection attributesSection = section.getConfigurationSection("attributes");
         if (attributesSection != null) {

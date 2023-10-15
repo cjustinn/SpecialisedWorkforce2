@@ -6,6 +6,7 @@ import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLProperty;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -21,6 +22,7 @@ public class WorkforceService {
     public static String earnedExperienceEquation = "1";
     public static double jobQuitLossRate = 0.2;
     public static int maximumLevel = 1;
+    public static int maxDescriptionLength = 150;
 
     // Lists
     public static List<WorkforceProfession> professions = new ArrayList<WorkforceProfession>();
@@ -196,5 +198,37 @@ public class WorkforceService {
         if (relevantProfession != null) {
             relevantProfession.addExperience(amount);
         }
+    }
+
+    public static List<TextComponent> ConformStringToMaxLength(String original, @Nullable NamedTextColor color) {
+        List<TextComponent> lines = new ArrayList<TextComponent>();
+        String[] originalParts = original.split(" ");
+
+        String current = "";
+        for (int i = 0; i < originalParts.length; i++) {
+            if (current.equals("")) {
+                current = originalParts[i];
+            } else if (String.format("%s %s", current, originalParts[i]).length() > maxDescriptionLength) {
+                lines.add(Component.text(current, color));
+                current = originalParts[i];
+            } else if (String.format("%s %s", current, originalParts[i]).length() == maxDescriptionLength) {
+                current = String.format("%s %s", current, originalParts[i]);
+                lines.add(Component.text(current, color));
+
+                current = "";
+            } else {
+                current = String.format("%s %s", current, originalParts[i]);
+            }
+
+            if (i == originalParts.length - 1) {
+                lines.add(Component.text(current, color));
+            }
+        }
+
+        return lines;
+    }
+
+    public static List<TextComponent> ConformStringToMaxLength(String original) {
+        return ConformStringToMaxLength(original, null);
     }
 }
