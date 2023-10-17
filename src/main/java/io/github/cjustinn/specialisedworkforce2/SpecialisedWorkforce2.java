@@ -317,11 +317,11 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
                 userTableQuery.executeUpdate();
                 userTableQuery.close();
 
-                final PreparedStatement logTableQuery = SQLService.connection.prepareStatement("CREATE TABLE IF NOT EXISTS workforce_interaction_log(interactionType INT NOT NULL,world TEXT NOT NULL,x DOUBLE(9,2) NOT NULL,y DOUBLE(9,2) NOT NULL,z DOUBLE(9,2) NOT NULL,uuid VARCHAR(36) NOT NULL,PRIMARY KEY(world, x, y, z));");
+                final PreparedStatement logTableQuery = SQLService.connection.prepareStatement("CREATE TABLE IF NOT EXISTS workforce_interaction_log(interactionType INT NOT NULL,world VARCHAR(100) NOT NULL,x DOUBLE(9,2) NOT NULL,y DOUBLE(9,2) NOT NULL,z DOUBLE(9,2) NOT NULL,uuid VARCHAR(36) NOT NULL,PRIMARY KEY(world, x, y, z));");
                 logTableQuery.executeUpdate();
                 logTableQuery.close();
 
-                final PreparedStatement rewardBacklogTableQuery = SQLService.connection.prepareStatement("CREATE TABLE IF NOT EXISTS workforce_reward_backlog(rewardType INT NOT NULL,uuid VARCHAR(36) NOT NULL,amount DOUBLE(9, 2) NOT NULL, rewardFrom TEXT DEFAULT NULL,PRIMARY KEY(rewardType, uuid, rewardFrom));");
+                final PreparedStatement rewardBacklogTableQuery = SQLService.connection.prepareStatement("CREATE TABLE IF NOT EXISTS workforce_reward_backlog(rewardType INT NOT NULL,uuid VARCHAR(36) NOT NULL,amount DOUBLE(9, 2) NOT NULL, rewardFrom VARCHAR(250) DEFAULT NULL,PRIMARY KEY(rewardType, uuid, rewardFrom));");
                 rewardBacklogTableQuery.executeUpdate();
                 rewardBacklogTableQuery.close();
 
@@ -383,10 +383,8 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
                     final double worldZ = logResults.getDouble(5);
                     final String uuid = logResults.getString(6);
 
-                    switch (type) {
-                        case FURNACE:
-                            AttributeLoggingService.logs.put(new Location(Bukkit.getWorld(worldName), worldX, worldY, worldZ), new WorkforceInteractionLogValue(uuid, type));
-                            break;
+                    if (type != null) {
+                        AttributeLoggingService.logs.put(new Location(Bukkit.getWorld(worldName), worldX, worldY, worldZ), new WorkforceInteractionLogValue(uuid, type));
                     }
                 }
 

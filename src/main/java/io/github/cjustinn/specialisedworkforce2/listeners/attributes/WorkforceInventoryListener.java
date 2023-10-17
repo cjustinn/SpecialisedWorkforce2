@@ -428,11 +428,13 @@ public class WorkforceInventoryListener implements Listener {
             PotionMeta meta = (PotionMeta) potion.getItemMeta();
             return meta.getBasePotionData().getType().getEffectType();
         }).collect(Collectors.toList())) {
-            if (!brewedPotionTypes.containsKey(type.getName())) {
-                brewedPotionTypes.put(type.getName(), 1);
-            } else {
-                int amount = brewedPotionTypes.get(type.getName());
-                brewedPotionTypes.put(type.getName(), amount + 1);
+            if (type != null) {
+                if (!brewedPotionTypes.containsKey(type.getName())) {
+                    brewedPotionTypes.put(type.getName(), 1);
+                } else {
+                    int amount = brewedPotionTypes.get(type.getName());
+                    brewedPotionTypes.put(type.getName(), amount + 1);
+                }
             }
         }
 
@@ -507,24 +509,26 @@ public class WorkforceInventoryListener implements Listener {
                                         PotionEffectType potionType = potionMeta.getBasePotionData().getType().getEffectType();
 
                                         if (potionType.getName().equals(type)) {
-                                            final boolean isExtended = potionMeta.getBasePotionData().isExtended();
-                                            final boolean isUpgraded = potionMeta.getBasePotionData().isUpgraded();
+                                            if (amount > 0 && potionType != null) {
+                                                final boolean isExtended = potionMeta.getBasePotionData().isExtended();
+                                                final boolean isUpgraded = potionMeta.getBasePotionData().isUpgraded();
 
-                                            PotionDuration relevantDuration = PotionDuration.standards.get(potionType);
-                                            int duration = 0;
+                                                PotionDuration relevantDuration = PotionDuration.standards.get(potionType);
+                                                int duration = 0;
 
-                                            if (isExtended) {
-                                                duration = relevantDuration.getExtendedDuration() + amount;
-                                            } else if (isUpgraded) {
-                                                duration = relevantDuration.getUpgradedDuration() + amount;
-                                            } else {
-                                                duration = relevantDuration.getBaseDuration() + amount;
+                                                if (isExtended) {
+                                                    duration = relevantDuration.getExtendedDuration() + amount;
+                                                } else if (isUpgraded) {
+                                                    duration = relevantDuration.getUpgradedDuration() + amount;
+                                                } else {
+                                                    duration = relevantDuration.getBaseDuration() + amount;
+                                                }
+
+                                                potionMeta.addCustomEffect(
+                                                        new PotionEffect(potionType, duration, isUpgraded ? 1 : 0),
+                                                        true
+                                                );
                                             }
-
-                                            potionMeta.addCustomEffect(
-                                                    new PotionEffect(potionType, duration, isUpgraded ? 1 : 0),
-                                                    true
-                                            );
 
                                             potionMeta.lore(
                                                     new ArrayList<TextComponent>() {{
@@ -550,8 +554,6 @@ public class WorkforceInventoryListener implements Listener {
                                 WorkforceService.RewardPlayer(profession, (int) Math.ceil(baseExperience * experienceModifier) * affectedCount);
                             }
                         }
-
-
                     }
                 }
             }

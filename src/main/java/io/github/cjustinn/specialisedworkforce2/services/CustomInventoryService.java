@@ -196,8 +196,6 @@ public class CustomInventoryService {
             description.add(Component.text(""));
             description.addAll(WorkforceService.ConformStringToMaxLength(prompt, promptColor));
 
-            LoggingService.WriteMessage(String.format("Prompt: %s", prompt));
-
             inventory.setItem(i, profession.getIconItem(description));
         }
     }
