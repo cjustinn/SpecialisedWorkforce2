@@ -8,10 +8,14 @@ import io.github.cjustinn.specialisedworkforce2.services.WorkforceService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class WorkforceUserProfession {
     public final String uuid;
@@ -65,16 +69,7 @@ public class WorkforceUserProfession {
 
             while (this.experience >= this.getRequiredExperience() && !this.isMaximumLevel()) {
                 this.experience -= this.getRequiredExperience();
-                this.level++;
-
-                Player user = this.getUser();
-                if (user != null) {
-                    user.sendMessage(
-                            Component.text("You are now a level ")
-                                    .append(Component.text(String.format("%d %s", this.level, this.getProfession().name), NamedTextColor.GOLD))
-                                    .append(Component.text("."))
-                    );
-                }
+                this.addLevel(1);
             }
 
             if (this.isMaximumLevel()) {
@@ -94,6 +89,36 @@ public class WorkforceUserProfession {
 
     public void addLevel(int amount) {
         this.level += amount;
+
+        Player user = this.getUser();
+        if (user != null) {
+            user.sendMessage(
+                    Component.text("You are now a level ")
+                            .append(Component.text(String.format("%d %s", this.level, this.getProfession().name), NamedTextColor.GOLD))
+                            .append(Component.text("."))
+            );
+
+            // Check for new attribute unlocks for this level.
+            List<WorkforceAttribute> unlockedAttributes = this.getProfession().attributes.stream().filter((attr) -> attr.levelThreshold == this.level).collect(Collectors.toList());
+            if (unlockedAttributes.size() > 0) {
+                user.sendMessage(
+                        Component.text("New profession attributes have been unlocked!", NamedTextColor.GREEN)
+                );
+
+                for (final WorkforceAttribute unlock : unlockedAttributes) {
+                    if (unlock.title != null) {
+                        user.sendMessage(
+                                Component.text(unlock.title).color(NamedTextColor.GOLD).decoration(TextDecoration.BOLD, true)
+                        );
+                    }
+
+                    if (unlock.unlockMessage != null) {
+                        user.sendMessage(Component.text(unlock.unlockMessage));
+                    }
+                }
+            }
+        }
+
         if (level >= WorkforceService.maximumLevel) {
             this.level = WorkforceService.maximumLevel;
             Bukkit.broadcast(this.getMaxLevelMessage());

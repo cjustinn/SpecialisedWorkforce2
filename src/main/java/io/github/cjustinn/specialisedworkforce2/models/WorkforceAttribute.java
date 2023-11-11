@@ -12,14 +12,19 @@ public class WorkforceAttribute {
     public final int levelThreshold;
     public final double paymentModifier;
     public final double experienceModifier;
+    public final String title;
+    public final String unlockMessage;
     private final Map<String, String> equations;
     private final List<String> targets;
 
     public WorkforceAttribute(ConfigurationSection section) {
         this.type = WorkforceAttributeType.valueOf(section.getString("type"));
+        this.title = section.getString("title");
+        this.unlockMessage = section.getString("unlockMessage");
         this.levelThreshold = section.getInt("levelThreshold");
         this.paymentModifier = section.contains("paymentModifier") ? section.getDouble("paymentModifier") : 1.0;
         this.experienceModifier = section.contains("experienceModifier") ? section.getDouble("experienceModifier") : 1.0;
+        this.targets = section.getStringList("targets");
         this.equations = new HashMap<String, String>() {{
             if (section.getKeys(false).contains("chance")) {
                 put("chance", section.getString("chance"));
@@ -28,7 +33,6 @@ public class WorkforceAttribute {
                 put("amount", section.getString("amount"));
             }
         }};
-        this.targets = section.getStringList("targets");
     }
 
     public String getEquation(String name) {

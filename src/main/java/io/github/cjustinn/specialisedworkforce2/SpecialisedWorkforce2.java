@@ -451,6 +451,10 @@ public final class SpecialisedWorkforce2 extends JavaPlugin {
         getCommand("workforce").setTabCompleter(new WorkforceCommandTabCompleter());
         getCommand("workforceadmin").setTabCompleter(new WorkforceAdminTabCompleter());
 
+        // Command Aliases
+        getCommand("workforce").setAliases(Arrays.asList("wf"));
+        getCommand("workforceadmin").setAliases(Arrays.asList("wfa"));
+
         // Listeners
         getServer().getPluginManager().registerEvents(new CustomInventoryListener(), this);
         getServer().getPluginManager().registerEvents(new WorkforceBlockListener(), this);
