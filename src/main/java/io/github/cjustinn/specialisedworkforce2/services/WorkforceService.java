@@ -220,7 +220,7 @@ public class WorkforceService {
                 current = String.format("%s %s", current, originalParts[i]);
             }
 
-            if (i == originalParts.length - 1) {
+            if (i == originalParts.length - 1 && !current.trim().equals("")) {
                 lines.add(Component.text(current, color));
             }
         }

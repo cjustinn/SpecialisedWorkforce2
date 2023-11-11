@@ -32,54 +32,58 @@ public class  CustomInventoryListener implements Listener {
         final String userId = ((Player) event.getWhoClicked()).getUniqueId().toString();
         InventoryView inventoryView = event.getView();
 
-        if (((TextComponent) inventoryView.title()).content().contains(CustomInventoryType.JOIN.title.content()) && event.getCurrentItem() != null) {
-            ItemStack item = event.getCurrentItem();
-            ItemMeta meta = item.getItemMeta();
+        try {
+            if (((TextComponent) inventoryView.title()).content().contains(CustomInventoryType.JOIN.title.content()) && event.getCurrentItem() != null) {
+                ItemStack item = event.getCurrentItem();
+                ItemMeta meta = item.getItemMeta();
 
-            if (meta.getPersistentDataContainer().has(new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"))) {
-                final String targetJob = meta.getPersistentDataContainer().get(
-                        new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"),
-                        PersistentDataType.STRING
-                );
+                if (meta.getPersistentDataContainer().has(new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"))) {
+                    final String targetJob = meta.getPersistentDataContainer().get(
+                            new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"),
+                            PersistentDataType.STRING
+                    );
 
-                if (!WorkforceService.UserHasActiveProfession(userId, targetJob)) {
-                    WorkforceProfession targetProfession = WorkforceService.GetProfessionById(targetJob);
-                    if (targetProfession != null) {
-                        final int userProfessionsInGroup = WorkforceService.GetActiveProfessionsInGroup(userId, targetProfession.group);
+                    if (!WorkforceService.UserHasActiveProfession(userId, targetJob)) {
+                        WorkforceProfession targetProfession = WorkforceService.GetProfessionById(targetJob);
+                        if (targetProfession != null) {
+                            final int userProfessionsInGroup = WorkforceService.GetActiveProfessionsInGroup(userId, targetProfession.group);
 
-                        if (userProfessionsInGroup < WorkforceService.GetMaxJobsForGroup(targetProfession.group)) {
-                            WorkforceService.AddProfessionToUser(userId, targetJob);
+                            if (userProfessionsInGroup < WorkforceService.GetMaxJobsForGroup(targetProfession.group)) {
+                                WorkforceService.AddProfessionToUser(userId, targetJob);
 
-                            inventoryView.close();
-                            CustomInventoryService.activeInventories.remove(userId);
+                                inventoryView.close();
+                                CustomInventoryService.activeInventories.remove(userId);
+                            }
                         }
                     }
                 }
-            }
-        } else if (inventoryView.title() == CustomInventoryType.STATUS.title && event.getCurrentItem() != null && event.getClick() == ClickType.RIGHT) {
-            ItemStack item = event.getCurrentItem();
-            ItemMeta meta = item.getItemMeta();
+            } else if (inventoryView.title() == CustomInventoryType.STATUS.title && event.getCurrentItem() != null && event.getClick() == ClickType.RIGHT) {
+                ItemStack item = event.getCurrentItem();
+                ItemMeta meta = item.getItemMeta();
 
-            if (meta.getPersistentDataContainer().has(new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"))) {
-                final String targetJob = meta.getPersistentDataContainer().get(
-                        new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"),
-                        PersistentDataType.STRING
-                );
+                if (meta.getPersistentDataContainer().has(new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"))) {
+                    final String targetJob = meta.getPersistentDataContainer().get(
+                            new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"),
+                            PersistentDataType.STRING
+                    );
 
-                if (WorkforceService.UserHasActiveProfession(userId, targetJob)) {
-                    final int index = WorkforceService.GetIndexOfUserProfession(userId, targetJob);
-                    WorkforceService.userProfessions.get(index).quitProfession();
+                    if (WorkforceService.UserHasActiveProfession(userId, targetJob)) {
+                        final int index = WorkforceService.GetIndexOfUserProfession(userId, targetJob);
+                        WorkforceService.userProfessions.get(index).quitProfession();
 
-                    inventoryView.close();
-                    CustomInventoryService.activeInventories.remove(userId);
+                        inventoryView.close();
+                        CustomInventoryService.activeInventories.remove(userId);
 
-                    Bukkit.getPlayer(UUID.fromString(userId)).sendMessage(Component.text(String.format("You are no longer a %s.", WorkforceService.userProfessions.get(index).getProfession().name), NamedTextColor.GREEN));
+                        Bukkit.getPlayer(UUID.fromString(userId)).sendMessage(Component.text(String.format("You are no longer a %s.", WorkforceService.userProfessions.get(index).getProfession().name), NamedTextColor.GREEN));
+                    }
                 }
             }
-        }
 
-        if (Arrays.stream(CustomInventoryType.values()).anyMatch((type) -> ((TextComponent) inventoryView.title()).content().contains(type.title.content()))) {
-            event.setCancelled(true);
+            if (Arrays.stream(CustomInventoryType.values()).anyMatch((type) -> ((TextComponent) inventoryView.title()).content().contains(type.title.content()))) {
+                event.setCancelled(true);
+            }
+        } catch (ClassCastException err) {
+            return;
         }
     }
 }
