@@ -3,6 +3,7 @@ package io.github.cjustinn.specialisedworkforce2.services;
 import io.github.cjustinn.specialisedworkforce2.enums.CustomInventoryType;
 import io.github.cjustinn.specialisedworkforce2.interfaces.WorkforceInventoryGUI;
 import io.github.cjustinn.specialisedworkforce2.models.*;
+import io.github.cjustinn.specialisedworkforce2.models.GUI.CustomInventoryMenuHolder;
 import io.github.cjustinn.specialisedworkforce2.models.GUI.WorkforceJoinInventoryGUI;
 import io.github.cjustinn.specialisedworkforce2.models.GUI.WorkforceLeaderboardInventoryGUI;
 import io.github.cjustinn.specialisedworkforce2.models.GUI.WorkforceStatusInventoryGUI;
@@ -38,18 +39,20 @@ public class CustomInventoryService {
              requiredRows = Math.max(1, (int) Math.ceil(professions.size() / 9.0));
              multiPage = requiredRows > 5;
 
-             customInventory = Bukkit.createInventory(
-                     (InventoryHolder) null,
-                     Math.min(requiredRows, 6) * 9,
-                     filter == null ? type.title : type.title.append(Component.text(String.format(" - %s", filter)))
-             );
+             customInventory = new CustomInventoryMenuHolder(Math.min(requiredRows, 6) * 9, type, filter).getInventory();
+//                     Bukkit.createInventory(
+//                     (InventoryHolder) null,
+//                     Math.min(requiredRows, 6) * 9,
+//                     filter == null ? type.title : type.title.append(Component.text(String.format(" - %s", filter)))
+//             );
              PopulateJoinInventoryGUI(1, (int) Math.ceil(requiredRows / 5), multiPage, filter, user, customInventory);
          } else if (type == CustomInventoryType.STATUS) {
              // CURRENT PROFESSION STATUS INVENTORY
             requiredRows = Math.max(1, (int) Math.ceil(WorkforceService.GetActiveUserProfessions(user).size() / 9.0));
             multiPage = requiredRows > 5;
 
-            customInventory = Bukkit.createInventory((InventoryHolder) null, Math.min(requiredRows, 6) * 9, type.title);
+            customInventory = new CustomInventoryMenuHolder(Math.min(requiredRows, 6) * 9, type, null).getInventory();
+//                    Bukkit.createInventory((InventoryHolder) null, Math.min(requiredRows, 6) * 9, type.title);
             PopulateStatusInventoryGUI(1, (int) Math.ceil(requiredRows / 5), multiPage, user, customInventory);
          } else if (type == CustomInventoryType.LEADERBOARD) {
              // GLOBAL LEADERBOARD INVENTORY
@@ -64,7 +67,8 @@ public class CustomInventoryService {
              ).collect(Collectors.toList()).size() / 9.0));
              multiPage = requiredRows > 5;
 
-             customInventory = Bukkit.createInventory((InventoryHolder) null, Math.min(requiredRows, 6) * 9, filterProfession != null ? Component.text(String.format("%s - %s", type.title.content(), filterProfession.name)) : type.title);
+             customInventory = new CustomInventoryMenuHolder(Math.min(requiredRows, 6) * 9, type, filter).getInventory();
+//                     Bukkit.createInventory((InventoryHolder) null, Math.min(requiredRows, 6) * 9, filterProfession != null ? Component.text(String.format("%s - %s", type.title.content(), filterProfession.name)) : type.title);
              PopulateLeaderboardInventoryGUI(1, (int) Math.ceil(requiredRows / 5), multiPage, filter, customInventory);
          }
 

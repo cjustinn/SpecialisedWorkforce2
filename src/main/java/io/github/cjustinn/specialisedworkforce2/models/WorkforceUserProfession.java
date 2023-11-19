@@ -74,8 +74,6 @@ public class WorkforceUserProfession {
 
             if (this.isMaximumLevel()) {
                 this.experience = 0;
-
-                Bukkit.broadcast(this.getMaxLevelMessage());
             }
 
             this.update();
@@ -90,8 +88,19 @@ public class WorkforceUserProfession {
     public void addLevel(int amount) {
         this.level += amount;
 
+        if (this.level > WorkforceService.maximumLevel) {
+            this.level = WorkforceService.maximumLevel;
+        }
+
         Player user = this.getUser();
         if (user != null) {
+            user.sendActionBar(
+                    Component.text(
+                            String.format("You are now a level %d %s.", this.level, this.getProfession().name),
+                            NamedTextColor.GREEN
+                    )
+            );
+
             user.sendMessage(
                     Component.text("You are now a level ")
                             .append(Component.text(String.format("%d %s", this.level, this.getProfession().name), NamedTextColor.GOLD))
@@ -119,8 +128,7 @@ public class WorkforceUserProfession {
             }
         }
 
-        if (level >= WorkforceService.maximumLevel) {
-            this.level = WorkforceService.maximumLevel;
+        if (level == WorkforceService.maximumLevel) {
             Bukkit.broadcast(this.getMaxLevelMessage());
         }
 
