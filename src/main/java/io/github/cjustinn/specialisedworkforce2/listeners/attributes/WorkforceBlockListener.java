@@ -18,14 +18,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class WorkforceBlockListener implements Listener {
@@ -93,8 +91,11 @@ public class WorkforceBlockListener implements Listener {
                                 )
                         ));
 
+                        final Collection<ItemStack> naturalItemDrops = event.getBlockState().getDrops(player.getInventory().getItemInMainHand(), player);
                         for (Item dropItem : event.getItems()) {
-                            dropItem.getItemStack().setAmount(dropItem.getItemStack().getAmount() + increaseAmount);
+                            if (naturalItemDrops.stream().anyMatch((naturalItem) -> naturalItem.getType() == dropItem.getItemStack().getType())) {
+                                dropItem.getItemStack().setAmount(dropItem.getItemStack().getAmount() + increaseAmount);
+                            }
                         }
                     }
                 }

@@ -1,8 +1,10 @@
 package io.github.cjustinn.specialisedworkforce2.listeners;
 
 import io.github.cjustinn.specialisedworkforce2.enums.CustomInventoryType;
+import io.github.cjustinn.specialisedworkforce2.models.GUI.CustomInventoryMenuHolder;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
 import io.github.cjustinn.specialisedworkforce2.services.CustomInventoryService;
+import io.github.cjustinn.specialisedworkforce2.services.LoggingService;
 import io.github.cjustinn.specialisedworkforce2.services.WorkforceService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -17,6 +19,7 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -31,12 +34,21 @@ public class  CustomInventoryListener implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         final String userId = ((Player) event.getWhoClicked()).getUniqueId().toString();
         InventoryView inventoryView = event.getView();
+        InventoryHolder holder = inventoryView.getTopInventory().getHolder();
 
-        try {
-            if (((TextComponent) inventoryView.title()).content().contains(CustomInventoryType.JOIN.title.content()) && event.getCurrentItem() != null) {
-                ItemStack item = event.getCurrentItem();
-                ItemMeta meta = item.getItemMeta();
+        if (holder instanceof CustomInventoryMenuHolder) {
+            // Cancel the event, since it's an inventory menu.
+            event.setCancelled(true);
 
+            // Handle the click, according to the item and the menu type.
+            // Get the clicked item (and its metadata).
+            ItemStack item = event.getCurrentItem();
+            ItemMeta meta = item != null ? item.getItemMeta() : null;
+
+            if (meta == null) { return; }
+
+            if (((CustomInventoryMenuHolder) holder).getType() == CustomInventoryType.JOIN) {
+                // If the inventory is a join menu, handle the join attempt according to the item clicked.
                 if (meta.getPersistentDataContainer().has(new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"))) {
                     final String targetJob = meta.getPersistentDataContainer().get(
                             new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"),
@@ -57,10 +69,8 @@ public class  CustomInventoryListener implements Listener {
                         }
                     }
                 }
-            } else if (inventoryView.title() == CustomInventoryType.STATUS.title && event.getCurrentItem() != null && event.getClick() == ClickType.RIGHT) {
-                ItemStack item = event.getCurrentItem();
-                ItemMeta meta = item.getItemMeta();
-
+            } else if (((CustomInventoryMenuHolder) holder).getType() == CustomInventoryType.STATUS && event.getClick() == ClickType.RIGHT) {
+                // If the inventory is a status type menu, attempt to quit the job based on the item right-clicked.
                 if (meta.getPersistentDataContainer().has(new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"))) {
                     final String targetJob = meta.getPersistentDataContainer().get(
                             new NamespacedKey(Bukkit.getPluginManager().getPlugin("SpecialisedWorkforce2"), "JobIdKey"),
@@ -78,12 +88,6 @@ public class  CustomInventoryListener implements Listener {
                     }
                 }
             }
-
-            if (Arrays.stream(CustomInventoryType.values()).anyMatch((type) -> ((TextComponent) inventoryView.title()).content().contains(type.title.content()))) {
-                event.setCancelled(true);
-            }
-        } catch (ClassCastException err) {
-            return;
         }
     }
 }
