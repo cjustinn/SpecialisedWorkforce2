@@ -1,0 +1,83 @@
+# |--------------------------|
+# |     General Settings    |
+# |--------------------------|
+mysql:
+  # Should the plugin use a MySQL database to store plugin data. When disabled, SQLite will be used. Enable for MySQL db storage. Defaults to false.
+  enabled: false
+  host: localhost
+  port: 3306
+  database: ''
+  username: ''
+  password: ''
+limits:
+  # The maximum achievable profession level that players can reach. Defaults to 50.
+  maxLevel: 50
+  # The maximum number of professions belonging to each specified profession group that a player can join at any given time. The default value only allows players to join one profession belonging to the "primary" group.
+  professionGroupLimits:
+    primary: 1
+  # The maximum character width of profession descriptions in the GUI menus. Defaults to 25.
+  maxProfessionDescriptionLength: 25
+general:
+  # Should the plugin provide financial rewards to players for completing profession activities? Defaults to true. This setting will be ignored if Vault and an economy plugin are not installed.
+  useEconomy: true
+  # What percentage, as a decimal (0.0 - 1.0), of profession levels should be lost when quitting a profession? Defaults to 0.2.
+  quitLossRate: 0.2
+  # What currency symbol should the plugin use if it cannot retrieve one from the installed economy plugin? Defaults to '$'.
+  fallbackCurrencySymbol: '$'
+equations:
+  # The equation to be used to determine how much experience a player receives for completing profession-related activities. Defaults to '5 * (1 + ({level} * 0.5))'.
+  experienceEarning: '5 * (1 + ({level} * 0.5))'
+  # The equation to be used to determine how much experience a player needs to reach the next level, based on their current level. Defaults to '100 * (1 + ({level} * 5))'.
+  experienceRequired: '100 * (1 + ({level} * 5))'
+# |-------------------------------|
+# |     Profession Definitions    |
+# |-------------------------------|
+professions:
+  # All professions should follow the pattern below.
+  # The id that the profession uses. This value MUST be unique.
+  farmer:
+    icon:
+      # The custom model data value to be applied in inventory gui menus to display the profession.
+      customModelData: 1000
+      # The Material ID of the item that should be used to display the profession in inventory gui menus.
+      name: WHEAT
+    attributes:
+      # The ID of the attribute, this value should be unique within the profession.
+      toolsave:
+        # A list of targets that should be affected by the attribute. These can be Material IDs, Entity IDs, etc., depending on the attribute type.
+        targets:
+          - '{*}_HOE'
+        # The equation used to determine the chance that the attribute will trigger when the potential-trigger action is taken. Resultant value should be between 0.0 and 1.0.
+        chance: '0.1 + ({level} * 0.013)'
+        # The attribute type ID. This will determine how the attribute is handled by the plugin.
+        type: DURABILITY_SAVE
+        # The minimum profession level that the player must have in the profession before this attribute applies.
+        levelThreshold: 10
+      # The ID of the attribute, this value should be unique within the profession.
+      cropbreaker:
+        # A list of targets that should be affected by the attribute. These can be Material IDs, Entity IDs, etc., depending on the attribute type.
+        targets:
+          - CARROT
+          - POTATO
+          - BEETROOT
+          - MELON
+          - PUMPKIN
+          - WHEAT
+        # The equation used to determine the chance that the attribute will trigger when the potential-trigger action is taken. Resultant value should be between 0.0 and 1.0.
+        chance: '0.1 + ({level} * 0.014)'
+        # The equation used to determine the amount that this attribute should impact it's related game area - for BONUS_BLOCK_DROPS, the result of this will determine how many extra items are dropped when breaking a targeted (and natural) block.
+        amount: '1 * (1 + ({level} * 0.06))'
+        levelThreshold: 0
+        type: BONUS_BLOCK_DROPS
+    payment:
+      # Should this profession receive economic rewards? This toggle will override the global "useEconomy" setting for this specific profession.
+      enabled: true
+      # The equation used to determine how much to pay a player, based on their level, when completing a profession-related activity.
+      equation: '0.25 * (1 + ({level} * 0.38))'
+    # The description for the profession which will be displayed in inventory gui menus when showing this profession.
+    description: Receives bonuses to crop drop yields and a chance to negate damage
+      to their hoes.
+    # The display name for this profession.
+    name: Farmer
+    # The profession group that this profession belongs to.
+    group: primary

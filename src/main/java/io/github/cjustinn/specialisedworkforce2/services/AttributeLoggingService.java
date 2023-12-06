@@ -1,9 +1,13 @@
 package io.github.cjustinn.specialisedworkforce2.services;
 
+import io.github.cjustinn.specialisedlib.Database.DatabaseService;
+import io.github.cjustinn.specialisedlib.Database.DatabaseValue;
+import io.github.cjustinn.specialisedlib.Database.DatabaseValueType;
+import io.github.cjustinn.specialisedlib.Logging.LoggingService;
 import io.github.cjustinn.specialisedworkforce2.enums.AttributeLogInteractionMode;
 import io.github.cjustinn.specialisedworkforce2.enums.AttributeLogType;
+import io.github.cjustinn.specialisedworkforce2.enums.DatabaseQuery;
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceRewardType;
-import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLProperty;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceInteractionLogValue;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceRewardBacklogItem;
 import org.bukkit.Location;
@@ -13,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 public class AttributeLoggingService {
     public static List<WorkforceRewardBacklogItem> rewardBacklog = new ArrayList<>();
@@ -35,13 +40,13 @@ public class AttributeLoggingService {
 
             if (matchIndex >= 0) {
                 WorkforceRewardBacklogItem existingBacklogItem = rewardBacklog.get(matchIndex);
-                success = SQLService.RunUpdate(
-                        "UPDATE workforce_reward_backlog SET amount = ? WHERE rewardType = ? AND uuid = ? AND rewardFrom = ?;",
-                        new MySQLProperty[]{
-                                new MySQLProperty("double", amount + existingBacklogItem.amount, 1),
-                                new MySQLProperty("integer", type.id, 2),
-                                new MySQLProperty("string", recipient, 3),
-                                new MySQLProperty("string", cause, 4)
+                success = DatabaseService.RunUpdate(
+                        DatabaseQuery.UpdateBackloggedReward,
+                        new DatabaseValue[]{
+                                new DatabaseValue(1, amount + existingBacklogItem.amount, DatabaseValueType.Double),
+                                new DatabaseValue(2, type.id, DatabaseValueType.Integer),
+                                new DatabaseValue(3, recipient, DatabaseValueType.String),
+                                new DatabaseValue(4, cause, DatabaseValueType.String)
                         }
                 );
 
@@ -51,13 +56,13 @@ public class AttributeLoggingService {
                 }
             }
         } else {
-            success = SQLService.RunUpdate(
-                    "INSERT INTO workforce_reward_backlog (rewardType, uuid, amount, rewardFrom) VALUES (?, ?, ?, ?);",
-                    new MySQLProperty[]{
-                            new MySQLProperty("integer", type.id, 1),
-                            new MySQLProperty("string", recipient, 2),
-                            new MySQLProperty("double", amount, 3),
-                            new MySQLProperty("string", cause, 4)
+            success = DatabaseService.RunUpdate(
+                    DatabaseQuery.InsertBacklogReward,
+                    new DatabaseValue[]{
+                            new DatabaseValue(1, type.id, DatabaseValueType.Integer),
+                            new DatabaseValue(2, recipient, DatabaseValueType.String),
+                            new DatabaseValue(3, amount, DatabaseValueType.Double),
+                            new DatabaseValue(4, cause, DatabaseValueType.String)
                     }
             );
 
@@ -92,23 +97,21 @@ public class AttributeLoggingService {
             String query = "";
 
             if (logAlreadyExists && !existingLogMatchesValue) {
-                query = "UPDATE workforce_interaction_log SET uuid = ? WHERE world = ? AND x = ? AND y = ? AND z = ?;";
-                success = SQLService.RunUpdate(query, new MySQLProperty[] {
-                        new MySQLProperty("string", uuid, 1),
-                        new MySQLProperty("string", location.getWorld().getName(), 2),
-                        new MySQLProperty("integer", location.getBlockX(), 3),
-                        new MySQLProperty("integer", location.getBlockY(), 4),
-                        new MySQLProperty("integer", location.getBlockZ(), 5)
+                success = DatabaseService.RunUpdate(DatabaseQuery.UpdateLog, new DatabaseValue[] {
+                        new DatabaseValue(1, uuid, DatabaseValueType.String),
+                        new DatabaseValue(2, location.getWorld().getName(), DatabaseValueType.String),
+                        new DatabaseValue(3, location.getBlockX(), DatabaseValueType.Integer),
+                        new DatabaseValue(4, location.getBlockY(), DatabaseValueType.Integer),
+                        new DatabaseValue(5, location.getBlockZ(), DatabaseValueType.Integer)
                 });
             } else if (!logAlreadyExists) {
-                query = "INSERT INTO workforce_interaction_log (interactionType, world, x, y, z, uuid) VALUES (?, ?, ?, ?, ?, ?);";
-                success = SQLService.RunUpdate(query, new MySQLProperty[] {
-                        new MySQLProperty("integer", type.value, 1),
-                        new MySQLProperty("string", location.getWorld().getName(), 2),
-                        new MySQLProperty("integer", location.getBlockX(), 3),
-                        new MySQLProperty("integer", location.getBlockY(), 4),
-                        new MySQLProperty("integer", location.getBlockZ(), 5),
-                        new MySQLProperty("string", uuid, 6)
+                success = DatabaseService.RunUpdate(DatabaseQuery.InsertLog, new DatabaseValue[] {
+                        new DatabaseValue(1, type.value, DatabaseValueType.Integer),
+                        new DatabaseValue(2, location.getWorld().getName(), DatabaseValueType.String),
+                        new DatabaseValue(3, location.getBlockX(), DatabaseValueType.Integer),
+                        new DatabaseValue(4, location.getBlockY(), DatabaseValueType.Integer),
+                        new DatabaseValue(5, location.getBlockZ(), DatabaseValueType.Integer),
+                        new DatabaseValue(6, uuid, DatabaseValueType.String)
                 });
             }
 
@@ -127,14 +130,14 @@ public class AttributeLoggingService {
 
         if (mode == AttributeLogInteractionMode.REMOVE) {
             AttributeLoggingService.logs.remove(location);
-            success = SQLService.RunUpdate("DELETE FROM workforce_interaction_log WHERE world = ? AND x = ? AND y = ? AND z = ?", new MySQLProperty[] {
-                    new MySQLProperty("string", location.getWorld().getName(), 1),
-                    new MySQLProperty("integer", location.getBlockX(), 2),
-                    new MySQLProperty("integer", location.getBlockY(), 3),
-                    new MySQLProperty("integer", location.getBlockZ(), 4),
+            success = DatabaseService.RunUpdate(DatabaseQuery.DeleteLog, new DatabaseValue[] {
+                    new DatabaseValue(1, location.getWorld().getName(), DatabaseValueType.String),
+                    new DatabaseValue(2, location.getBlockX(), DatabaseValueType.Integer),
+                    new DatabaseValue(3, location.getBlockY(), DatabaseValueType.Integer),
+                    new DatabaseValue(4, location.getBlockZ(), DatabaseValueType.Integer),
             });
         } else {
-            LoggingService.WriteError("Attempted to add a valid interaction to a log without required values.");
+            LoggingService.writeLog(Level.SEVERE, "Attempted to add a valid interaction to a log without required values.");
         }
 
         return success;

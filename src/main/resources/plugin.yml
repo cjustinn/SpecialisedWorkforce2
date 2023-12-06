@@ -10,8 +10,12 @@ commands:
   workforce:
     description: The main command for all SpecialisedWorkforce 2 operations.
     usage: /workforce [join/quit]
+    aliases:
+      - wf
     permission: specialisedworkforce.workforce
   workforceadmin:
     description: The administration command for SpecialisedWorkforce 2 operations.
     usage: /workforceadmin <add/set> <level/experience> <user> <amount>
+    aliases:
+      - wfa
     permission: specialisedworkforce.workforceadmin

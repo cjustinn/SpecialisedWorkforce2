@@ -40,11 +40,6 @@ public class CustomInventoryService {
              multiPage = requiredRows > 5;
 
              customInventory = new CustomInventoryMenuHolder(Math.min(requiredRows, 6) * 9, type, filter).getInventory();
-//                     Bukkit.createInventory(
-//                     (InventoryHolder) null,
-//                     Math.min(requiredRows, 6) * 9,
-//                     filter == null ? type.title : type.title.append(Component.text(String.format(" - %s", filter)))
-//             );
              PopulateJoinInventoryGUI(1, (int) Math.ceil(requiredRows / 5), multiPage, filter, user, customInventory);
          } else if (type == CustomInventoryType.STATUS) {
              // CURRENT PROFESSION STATUS INVENTORY
@@ -52,7 +47,6 @@ public class CustomInventoryService {
             multiPage = requiredRows > 5;
 
             customInventory = new CustomInventoryMenuHolder(Math.min(requiredRows, 6) * 9, type, null).getInventory();
-//                    Bukkit.createInventory((InventoryHolder) null, Math.min(requiredRows, 6) * 9, type.title);
             PopulateStatusInventoryGUI(1, (int) Math.ceil(requiredRows / 5), multiPage, user, customInventory);
          } else if (type == CustomInventoryType.LEADERBOARD) {
              // GLOBAL LEADERBOARD INVENTORY
@@ -68,7 +62,6 @@ public class CustomInventoryService {
              multiPage = requiredRows > 5;
 
              customInventory = new CustomInventoryMenuHolder(Math.min(requiredRows, 6) * 9, type, filter).getInventory();
-//                     Bukkit.createInventory((InventoryHolder) null, Math.min(requiredRows, 6) * 9, filterProfession != null ? Component.text(String.format("%s - %s", type.title.content(), filterProfession.name)) : type.title);
              PopulateLeaderboardInventoryGUI(1, (int) Math.ceil(requiredRows / 5), multiPage, filter, customInventory);
          }
 

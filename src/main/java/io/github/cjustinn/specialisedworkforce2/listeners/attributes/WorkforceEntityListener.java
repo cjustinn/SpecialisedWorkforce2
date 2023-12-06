@@ -6,10 +6,8 @@ import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import io.github.cjustinn.specialisedworkforce2.services.EconomyService;
 import io.github.cjustinn.specialisedworkforce2.services.EvaluationService;
 import io.github.cjustinn.specialisedworkforce2.services.WorkforceService;
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
 import org.bukkit.entity.Ageable;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,11 +15,9 @@ import org.bukkit.event.entity.EntityBreedEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 public class WorkforceEntityListener implements Listener {
     @EventHandler

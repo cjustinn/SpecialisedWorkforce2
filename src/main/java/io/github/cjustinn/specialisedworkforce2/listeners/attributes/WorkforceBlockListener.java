@@ -1,15 +1,9 @@
 package io.github.cjustinn.specialisedworkforce2.listeners.attributes;
 
-import io.github.cjustinn.specialisedworkforce2.SpecialisedWorkforce2;
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceAttributeType;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceAttribute;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import io.github.cjustinn.specialisedworkforce2.services.*;
-import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Sapling;
@@ -19,12 +13,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.metadata.MetadataValue;
-
-import javax.annotation.Nullable;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class WorkforceBlockListener implements Listener {
     @EventHandler

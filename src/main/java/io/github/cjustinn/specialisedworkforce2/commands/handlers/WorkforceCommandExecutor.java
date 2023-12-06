@@ -1,8 +1,8 @@
 package io.github.cjustinn.specialisedworkforce2.commands.handlers;
 
+import io.github.cjustinn.specialisedlib.Logging.LoggingService;
 import io.github.cjustinn.specialisedworkforce2.enums.CustomInventoryType;
 import io.github.cjustinn.specialisedworkforce2.services.CustomInventoryService;
-import io.github.cjustinn.specialisedworkforce2.services.LoggingService;
 import io.github.cjustinn.specialisedworkforce2.services.WorkforceService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -14,7 +14,7 @@ import org.bukkit.inventory.Inventory;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.logging.Level;
 
 public class WorkforceCommandExecutor implements CommandExecutor {
     @Override
@@ -65,7 +65,7 @@ public class WorkforceCommandExecutor implements CommandExecutor {
                 player.sendMessage(Component.text("That is not a valid workforce sub-command!").color(NamedTextColor.RED));
             }
         } else {
-            LoggingService.WriteWarning("The /workforce command cannot be run via console!");
+            LoggingService.writeLog(Level.WARNING,"The /workforce command cannot be run via console!");
             return false;
         }
 

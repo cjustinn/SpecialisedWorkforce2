@@ -1,9 +1,11 @@
 package io.github.cjustinn.specialisedworkforce2.models;
 
-import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLProperty;
+import io.github.cjustinn.specialisedlib.Database.DatabaseService;
+import io.github.cjustinn.specialisedlib.Database.DatabaseValue;
+import io.github.cjustinn.specialisedlib.Database.DatabaseValueType;
+import io.github.cjustinn.specialisedlib.Logging.LoggingService;
+import io.github.cjustinn.specialisedworkforce2.enums.DatabaseQuery;
 import io.github.cjustinn.specialisedworkforce2.services.EvaluationService;
-import io.github.cjustinn.specialisedworkforce2.services.LoggingService;
-import io.github.cjustinn.specialisedworkforce2.services.SQLService;
 import io.github.cjustinn.specialisedworkforce2.services.WorkforceService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -15,6 +17,7 @@ import org.bukkit.entity.Player;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class WorkforceUserProfession {
@@ -173,17 +176,16 @@ public class WorkforceUserProfession {
     }
 
     public void update() {
-        final String query = "UPDATE workforce_employment SET jobLevel = ?, jobExperience = ?, active = ? WHERE uuid = ? AND jobId = ?";
-        final boolean success = SQLService.RunUpdate(query, new MySQLProperty[]{
-                new MySQLProperty("integer", this.level, 1),
-                new MySQLProperty("integer", this.experience, 2),
-                new MySQLProperty("integer", this.active ? 1 : 0, 3),
-                new MySQLProperty("string", this.uuid, 4),
-                new MySQLProperty("string", this.jobId, 5),
+        final boolean success = DatabaseService.RunUpdate(DatabaseQuery.UpdateUser, new DatabaseValue[]{
+                new DatabaseValue(1, this.level, DatabaseValueType.Integer),
+                new DatabaseValue(2, this.experience, DatabaseValueType.Integer),
+                new DatabaseValue(3, this.active ? 1 : 0, DatabaseValueType.Integer),
+                new DatabaseValue(4, this.uuid, DatabaseValueType.String),
+                new DatabaseValue(5, this.jobId, DatabaseValueType.String),
         });
 
         if (!success) {
-            LoggingService.WriteError("Unable to save changes to user record in database!");
+            LoggingService.writeLog(Level.SEVERE, "Unable to save changes to user record in database!");
         }
     }
 }

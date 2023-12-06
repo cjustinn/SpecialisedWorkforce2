@@ -1,9 +1,11 @@
 package io.github.cjustinn.specialisedworkforce2.models;
 
+import io.github.cjustinn.specialisedlib.Database.DatabaseService;
+import io.github.cjustinn.specialisedlib.Database.DatabaseValue;
+import io.github.cjustinn.specialisedlib.Database.DatabaseValueType;
+import io.github.cjustinn.specialisedworkforce2.enums.DatabaseQuery;
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceRewardType;
-import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLProperty;
 import io.github.cjustinn.specialisedworkforce2.services.AttributeLoggingService;
-import io.github.cjustinn.specialisedworkforce2.services.SQLService;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -30,12 +32,12 @@ public class WorkforceRewardBacklogItem {
                 (backlog) -> !(backlog.recipient.equals(this.recipient) && backlog.type == this.type && backlog.rewardingProfession.equals(this.rewardingProfession))
         ).collect(Collectors.toList());
 
-        return SQLService.RunUpdate(
-                "DELETE FROM workforce_reward_backlog WHERE rewardType = ? AND uuid = ? AND rewardFrom = ?;",
-                new MySQLProperty[] {
-                        new MySQLProperty("integer", this.type.id, 1),
-                        new MySQLProperty("string", this.recipient, 2),
-                        new MySQLProperty("string", this.rewardingProfession, 3),
+        return DatabaseService.RunUpdate(
+                DatabaseQuery.DeleteBackloggedReward,
+                new DatabaseValue[] {
+                        new DatabaseValue(1, this.type.id, DatabaseValueType.Integer),
+                        new DatabaseValue(2, this.recipient, DatabaseValueType.String),
+                        new DatabaseValue(3, this.rewardingProfession, DatabaseValueType.String),
                 }
         );
     }
