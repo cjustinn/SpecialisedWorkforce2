@@ -1,5 +1,6 @@
 package io.github.cjustinn.specialisedworkforce2.services;
 
+import io.github.cjustinn.specialisedlib.Logging.LoggingService;
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceRewardType;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
@@ -8,12 +9,15 @@ import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class EconomyService {
-    public static String currencySymbol = "$";
+    public static String fallbackCurrencySymbol = "$";
     private static Economy economy;
     public static boolean economyIntegrationEnabled = false;
+    public static boolean enableSpecialisedEconomicsFeatures = false;
 
+    public static Economy getEconomy() { return economy; }
     public static void SetEconomy(Economy economy) {
         EconomyService.economy = economy;
     }
@@ -40,12 +44,12 @@ public class EconomyService {
             ModifyFunds(offlinePlayer.getPlayer(), amount);
         } else {
             if (!AttributeLoggingService.BacklogReward(WorkforceRewardType.ECONOMIC, recipient, amount, cause)) {
-                LoggingService.WriteError(
+                LoggingService.writeLog(
+                        Level.SEVERE,
                         String.format(
-                                "Unable to backlog economic payment to user %s: %s%.2f from %s profession.",
+                                "Unable to backlog economic payment to user %s: %s from %s profession.",
                                 recipient,
-                                EconomyService.currencySymbol,
-                                amount,
+                                EconomyService.economy.format(amount),
                                 cause
                         )
                 );

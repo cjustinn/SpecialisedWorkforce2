@@ -1,8 +1,12 @@
 package io.github.cjustinn.specialisedworkforce2.services;
 
+import io.github.cjustinn.specialisedlib.Database.DatabaseService;
+import io.github.cjustinn.specialisedlib.Database.DatabaseValue;
+import io.github.cjustinn.specialisedlib.Database.DatabaseValueType;
+import io.github.cjustinn.specialisedlib.Logging.LoggingService;
+import io.github.cjustinn.specialisedworkforce2.enums.DatabaseQuery;
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceAttributeType;
 import io.github.cjustinn.specialisedworkforce2.enums.WorkforceRewardType;
-import io.github.cjustinn.specialisedworkforce2.models.SQL.MySQLProperty;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceUserProfession;
 import net.kyori.adventure.text.Component;
@@ -13,6 +17,7 @@ import org.bukkit.OfflinePlayer;
 
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class WorkforceService {
@@ -134,10 +139,9 @@ public class WorkforceService {
             }
         } else {
             // Add the entry to the DB and store a new object.
-            final String query = "INSERT INTO workforce_employment (uuid, jobId) VALUES (?, ?)";
-            final boolean success = SQLService.RunUpdate(query, new MySQLProperty[]{
-               new MySQLProperty("string", user, 1),
-               new MySQLProperty("string", job, 2)
+            final boolean success = DatabaseService.RunUpdate(DatabaseQuery.InsertUser, new DatabaseValue[]{
+               new DatabaseValue(1, user, DatabaseValueType.String),
+               new DatabaseValue(2, job, DatabaseValueType.String)
             });
 
             if (success) {
@@ -163,7 +167,8 @@ public class WorkforceService {
             offlinePlayer.getPlayer().giveExp(amount);
         } else {
             if (!AttributeLoggingService.BacklogReward(WorkforceRewardType.PROFESSION_EXPERIENCE, recipient, amount, cause)) {
-                LoggingService.WriteError(
+                LoggingService.writeLog(
+                        Level.SEVERE,
                         String.format(
                                 "Unable to backlog minecraft experience reward for user %s: %d for %s profession.",
                                 recipient,
@@ -181,7 +186,8 @@ public class WorkforceService {
             profession.addExperience(amount);
         } else {
             if (!AttributeLoggingService.BacklogReward(WorkforceRewardType.PROFESSION_EXPERIENCE, profession.uuid, amount, profession.getProfession().name)) {
-                LoggingService.WriteError(
+                LoggingService.writeLog(
+                        Level.SEVERE,
                         String.format(
                                 "Unable to backlog profession experience reward for user %s: %d for %s profession.",
                                 profession.uuid,

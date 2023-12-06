@@ -19,7 +19,6 @@ import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 public class WorkforcePlayerListener implements Listener {
     @EventHandler

@@ -24,7 +24,7 @@ public class WorkforceJoinLeaveListener implements Listener {
                 switch (reward.type) {
                     case ECONOMIC:
                         event.getPlayer().sendMessage(Component.text(
-                                String.format("You earned %s%.2f while offline from %s.", EconomyService.currencySymbol, reward.amount, rewardCauseMessage),
+                                String.format("You earned %s while offline from %s.", EconomyService.getEconomy().format(reward.amount), rewardCauseMessage),
                                 NamedTextColor.GRAY
                         ));
                         EconomyService.RewardPlayer(event.getPlayer().getUniqueId().toString(), reward.amount, reward.rewardingProfession);

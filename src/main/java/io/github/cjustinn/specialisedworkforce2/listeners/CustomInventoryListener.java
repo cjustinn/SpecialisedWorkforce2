@@ -4,7 +4,6 @@ import io.github.cjustinn.specialisedworkforce2.enums.CustomInventoryType;
 import io.github.cjustinn.specialisedworkforce2.models.GUI.CustomInventoryMenuHolder;
 import io.github.cjustinn.specialisedworkforce2.models.WorkforceProfession;
 import io.github.cjustinn.specialisedworkforce2.services.CustomInventoryService;
-import io.github.cjustinn.specialisedworkforce2.services.LoggingService;
 import io.github.cjustinn.specialisedworkforce2.services.WorkforceService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
